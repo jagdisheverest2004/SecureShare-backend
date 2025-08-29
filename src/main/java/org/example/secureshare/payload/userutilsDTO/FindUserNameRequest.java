@@ -1,4 +1,4 @@
-package org.example.secureshare.payload;
+package org.example.secureshare.payload.userutilsDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OtpVerificationRequest {
+public class FindUserNameRequest {
     private String email;
-    private String otp;
 }

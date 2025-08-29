@@ -1,9 +1,9 @@
 package org.example.secureshare.controller;
 
-import org.example.secureshare.payload.FindUserNameRequest;
-import org.example.secureshare.payload.ForgotPasswordRequest;
+import org.example.secureshare.payload.userutilsDTO.FindUserNameRequest;
+import org.example.secureshare.payload.userutilsDTO.ForgotPasswordRequest;
 import org.example.secureshare.payload.MessageResponse;
-import org.example.secureshare.payload.ResetPasswordRequest;
+import org.example.secureshare.payload.userutilsDTO.ResetPasswordRequest;
 import org.example.secureshare.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

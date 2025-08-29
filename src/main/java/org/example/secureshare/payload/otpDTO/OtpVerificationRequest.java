@@ -1,4 +1,4 @@
-package org.example.secureshare.payload;
+package org.example.secureshare.payload.otpDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,8 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ResetPasswordRequest {
+public class OtpVerificationRequest {
     private String email;
     private String otp;
-    private String newPassword;
 }
