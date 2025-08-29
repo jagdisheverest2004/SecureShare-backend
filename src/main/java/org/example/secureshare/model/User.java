@@ -6,6 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Data
 @NoArgsConstructor
 @Entity
@@ -22,26 +25,20 @@ public class User {
     private Long userId;
 
     @NotBlank(message = "Username should not be Blank")
-    @Size(max = 20 , min = 5, message = "Username must contain atleast 5 characters" )
-    @Column(nullable = false,name = "username")
+    @Size(max = 20, min = 5, message = "Username must contain at least 5 characters")
+    @Column(nullable = false, name = "username")
     private String username;
 
     @NotBlank(message = "Password should not be Blank")
-    @Size(max = 120 , message = "Password must contain atmost 120 characters")
+    @Size(max = 120, message = "Password must contain at most 120 characters")
     @Column(nullable = false, name = "password")
     private String password;
 
     @NotBlank(message = "Email should not be Blank")
-    @Size(max = 50 ,message = "Email must contain atmost 50 characters")
-    @Column(nullable = false , name = "email")
+    @Size(max = 50, message = "Email must contain at most 50 characters")
+    @Column(nullable = false, name = "email")
     @Email(message = "Email is not valid")
     private String email;
-
-    public User(String username, String email, String password) {
-        this.username = username;
-        this.password = password;
-        this.email = email;
-    }
 
     @ManyToOne
     @JoinColumn(name = "role_id")
@@ -55,4 +52,12 @@ public class User {
     @Column(name = "private_key")
     private String privateKey;
 
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<File> files = new HashSet<>();
+
+    public User(String username, String email, String password) {
+        this.username = username;
+        this.password = password;
+        this.email = email;
+    }
 }

@@ -13,6 +13,7 @@ import org.example.secureshare.security.response.UserInfoResponse;
 import org.example.secureshare.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.example.secureshare.service.KeyService;
+import org.example.secureshare.service.OtpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,11 +25,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @RestController
@@ -53,39 +54,8 @@ public class AuthController {
     @Autowired
     private RoleRepository roleRepository;
 
-    @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        Authentication authentication;
-        try{
-            authentication = authenticationManager
-                    .authenticate(new UsernamePasswordAuthenticationToken(
-                                    loginRequest.getUsername(),
-                                    loginRequest.getPassword()
-                            )
-                    );
-
-        }
-        catch(AuthenticationException exception){
-            Map<String,Object> body = new HashMap<>();
-            body.put("message", "Bad credentials");
-            body.put("status",false);
-
-            return new ResponseEntity<Object>(body, HttpStatus.UNAUTHORIZED);
-        }
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        ResponseCookie jwtCookie = jwtUtils.generateTokenFromCookie(userDetails);
-        List<String> roles = (List<String>) userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .toList();
-        UserInfoResponse userInfoResponse = new UserInfoResponse(
-                userDetails.getId(),
-                userDetails.getUsername(),
-                roles,
-                jwtCookie.toString()
-        );
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString()).body(userInfoResponse);
-    }
+    @Autowired
+    private OtpService otpService;
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest) {
@@ -101,7 +71,6 @@ public class AuthController {
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Create a new user's account
         User user = new User(
                 signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
@@ -110,11 +79,11 @@ public class AuthController {
 
         try {
             KeyPair keyPair = keyService.generateRsaKeyPair();
-            user.setPublicKey(keyService.convertPublicKeyToString(keyPair.getPublic()));
-            user.setPrivateKey(keyService.convertPrivateKeyToString(keyPair.getPrivate()));
+            user.setPublicKey(keyService.encodePublicKey(keyPair.getPublic()));
+            user.setPrivateKey(keyService.encodePrivateKey(keyPair.getPrivate()));
         } catch (NoSuchAlgorithmException e) {
             return ResponseEntity
-                    .status(500)
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Error: Key generation failed."));
         }
 
@@ -126,19 +95,61 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
+    @PostMapping("/signin")
+    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-    @GetMapping("/user")
-    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = (List<String>) userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-        UserInfoResponse userInfoResponse = new UserInfoResponse(
-                userDetails.getId(),
-                userDetails.getUsername(),
-                roles
-        );
-        return ResponseEntity.ok(userInfoResponse);
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            otpService.generateAndSendOtp(userDetails.getEmail());
+
+            return ResponseEntity.ok(new MessageResponse("OTP sent to your registered email. Please verify to sign in."));
+        } catch (AuthenticationException exception) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("message", "Bad credentials");
+            body.put("status", false);
+            return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtpAndLogin(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String otp = request.get("otp");
+
+        try {
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new NoSuchElementException("User not found."));
+
+            if (otpService.verifyOtp(user.getEmail(), otp)) {
+                // Manually create an Authentication object for the security context
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        user.getUsername(), user.getPassword(), Collections.singletonList((GrantedAuthority) () -> "ROLE_USER"));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                UserDetailsImpl userDetails = new UserDetailsImpl(user.getUserId(), user.getUsername(), user.getEmail(), user.getPassword(), Collections.singletonList((GrantedAuthority) () -> "ROLE_USER"));
+
+                ResponseCookie jwtCookie = jwtUtils.generateTokenFromCookie(userDetails);
+                List<String> roles = userDetails.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .toList();
+
+                UserInfoResponse userInfoResponse = new UserInfoResponse(
+                        userDetails.getId(),
+                        userDetails.getUsername(),
+                        roles,
+                        jwtCookie.toString()
+                );
+
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                        .body(userInfoResponse);
+            }
+        } catch (NoSuchElementException | IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(e.getMessage()));
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("An unexpected error occurred."));
     }
 
     @PostMapping("/signout")
@@ -149,5 +160,4 @@ public class AuthController {
         response.put("status", true);
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
     }
-
 }
