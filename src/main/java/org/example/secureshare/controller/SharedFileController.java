@@ -4,6 +4,7 @@ import org.example.secureshare.model.User;
 import org.example.secureshare.payload.MessageResponse;
 import org.example.secureshare.payload.sharedfileDTO.SharedFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
+import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.SharedFileService;
 import org.example.secureshare.service.OtpService;
@@ -34,12 +35,14 @@ public class SharedFileController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuditLogService auditLogService;
+
     @PostMapping("/share")
     public ResponseEntity<?> shareFile(@RequestBody ShareFileRequest request, @RequestParam(value = "otp", required = false) String otp) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String senderUsername = authentication.getName();
-
             User sender = userRepository.findByUsername(senderUsername).orElseThrow(() -> new NoSuchElementException("Sender user not found: " + senderUsername));
 
             // OTP verification for sensitive files
@@ -61,6 +64,7 @@ public class SharedFileController {
                     request.isSensitive()
             );
 
+            auditLogService.logAction(senderUsername, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "File shared successfully!"));
 
         } catch (NoSuchElementException e) {
@@ -77,6 +81,7 @@ public class SharedFileController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedByMe(username);
+        auditLogService.logAction(username, "FETCH_SHARED_FILES_BY_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 
@@ -85,6 +90,7 @@ public class SharedFileController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedToMe(username);
+        auditLogService.logAction(username, "FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 }

@@ -5,6 +5,7 @@ import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
 import org.example.secureshare.payload.fiteDTO.UploadFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.repository.UserRepository;
+import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.OtpService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,9 @@ public class FileController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuditLogService auditLogService;
+
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(
             @RequestParam("file") MultipartFile file,
@@ -45,6 +49,7 @@ public class FileController {
         try {
             Long fileId = fileService.storeFile(file, fileName, description, category, username);
             UploadFileResponse response = new UploadFileResponse(fileId, fileName, "File uploaded successfully!");
+            auditLogService.logAction(username, "FILE_UPLOAD", fileName);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
@@ -60,6 +65,7 @@ public class FileController {
 
         try {
             FetchFileResponse response = fileService.getFileByFilename(filename, username);
+            auditLogService.logAction(username, "FILE_FETCH", filename);
             return ResponseEntity.ok(response);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -77,6 +83,7 @@ public class FileController {
 
         try {
             List<FetchFileResponse> files = fileService.getAllFilesForUser(username);
+            auditLogService.logAction(username, "FETCH_ALL_FILES", "");
             return ResponseEntity.ok(files);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));

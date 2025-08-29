@@ -13,6 +13,7 @@ import org.example.secureshare.security.response.MessageResponse;
 import org.example.secureshare.security.response.UserInfoResponse;
 import org.example.secureshare.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
+import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.KeyService;
 import org.example.secureshare.service.OtpService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +57,9 @@ public class AuthController {
     private RoleRepository roleRepository;
 
     @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
     private OtpService otpService;
 
     @PostMapping("/signup")
@@ -93,6 +97,7 @@ public class AuthController {
 
         user.setRole(userRole);
         userRepository.save(user);
+        auditLogService.logAction(user.getUsername(), "USER_REGISTERED", "");
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
@@ -104,7 +109,6 @@ public class AuthController {
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             otpService.generateAndSendOtp(userDetails.getEmail());
-
             return ResponseEntity.ok(new MessageResponse("OTP sent to your registered email. Please verify to sign in."));
         } catch (AuthenticationException exception) {
             Map<String, Object> body = new HashMap<>();
@@ -143,6 +147,7 @@ public class AuthController {
                         jwtCookie.toString()
                 );
 
+                auditLogService.logAction(username, "USER_SIGNED_IN" , "");
                 return ResponseEntity.ok()
                         .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                         .body(userInfoResponse);
@@ -159,6 +164,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "User signed out successfully!");
         response.put("status", true);
+        auditLogService.logAction(SecurityContextHolder.getContext().getAuthentication().getName(), "USER_SIGN_OUT", "");
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
     }
 }

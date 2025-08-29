@@ -17,5 +17,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(@NotBlank @Size(max = 50) @Email String email);
 
     Optional<User> findByEmail(String email);
-    // Define query methods here
 }
