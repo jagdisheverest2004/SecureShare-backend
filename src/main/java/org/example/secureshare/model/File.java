@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,12 +16,12 @@ public class File {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "TEXT")
-    private String base64Data;
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    private byte[] data; // Corrected type to byte[]
 
     private String filename;
     private String description;
     private String category;
     private LocalDateTime timestamp;
-
 }

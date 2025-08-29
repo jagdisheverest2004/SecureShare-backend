@@ -21,13 +21,11 @@ public class FileService {
             throw new IllegalArgumentException("File cannot be empty.");
         }
 
-        String base64Data = Base64.getEncoder().encodeToString(file.getBytes());
-
         File newFile = new File();
         newFile.setFilename(fileName);
         newFile.setDescription(description);
         newFile.setCategory(category);
-        newFile.setBase64Data(base64Data);
+        newFile.setData(file.getBytes()); // Store raw bytes
         newFile.setTimestamp(LocalDateTime.now());
 
         File savedFile = fileRepository.save(newFile);
@@ -37,6 +35,10 @@ public class FileService {
     public FetchFileResponse getFileByFilename(String filename) {
         File file = fileRepository.findByFilename(filename)
                 .orElseThrow(() -> new IllegalArgumentException("File not found with filename: " + filename));
-        return new FetchFileResponse(file.getFilename(), file.getDescription(), file.getCategory(), file.getBase64Data());
+
+        // Encode to Base64 only for the response
+        String base64Data = Base64.getEncoder().encodeToString(file.getData());
+
+        return new FetchFileResponse(file.getFilename(), file.getDescription(), file.getCategory(), base64Data);
     }
 }

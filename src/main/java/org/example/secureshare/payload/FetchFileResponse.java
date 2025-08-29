@@ -11,5 +11,5 @@ public class FetchFileResponse {
     private String fileName;
     private String description;
     private String category;
-    private String base64Data;
+    private String Data;
 }
