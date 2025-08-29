@@ -10,8 +10,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -22,9 +22,9 @@ public class FileController {
     @Autowired
     private FileService fileService;
 
-    @PostMapping("/upload/{file}")
+    @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(
-            @PathVariable("file") MultipartFile file,
+            @RequestParam("file") MultipartFile file,
             @RequestParam("filename") String fileName,
             @RequestParam("description") String description,
             @RequestParam("category") String category) {
@@ -57,6 +57,21 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/fetch-all")
+    public ResponseEntity<?> fetchAllFilesForUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        try {
+            List<FetchFileResponse> files = fileService.getAllFilesForUser(username);
+            return ResponseEntity.ok(files);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to retrieve files."));
         }
     }
 }

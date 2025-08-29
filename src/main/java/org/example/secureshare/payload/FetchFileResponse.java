@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FetchFileResponse {
+    private Long id;
     private String fileName;
     private String description;
     private String category;
-    private String Data;
 }

@@ -9,10 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 public class FileService {
@@ -58,6 +61,7 @@ public class FileService {
 
     @Transactional(readOnly = true)
     public FetchFileResponse getFileByFilename(String filename, String username) {
+        // ... (existing code for getFileByFilename)
         try {
             File file = fileRepository.findByFilename(filename)
                     .orElseThrow(() -> new NoSuchElementException("File not found with filename: " + filename));
@@ -68,23 +72,30 @@ public class FileService {
                 throw new SecurityException("User is not authorized to access this file.");
             }
 
-            byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
-            byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(
-                    encryptedAesKeyBytes,
-                    keyService.decodePrivateKey(loggedInUser.getPrivateKey())
-            );
-            SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
-            byte[] iv = Base64.getDecoder().decode(file.getIv());
-
-            byte[] decryptedFileData = keyService.decryptWithAesGcm(file.getEncryptedData(), decryptedAesKey, iv);
-
-            String base64Data = Base64.getEncoder().encodeToString(decryptedFileData);
-            return new FetchFileResponse(file.getFilename(), file.getDescription(), file.getCategory(), base64Data);
+            return new FetchFileResponse(file.getId(), file.getFilename(), file.getDescription(), file.getCategory());
 
         } catch (NoSuchElementException | SecurityException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to decrypt file due to a cryptographic error.", e);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<FetchFileResponse> getAllFilesForUser(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
+
+        List<File> files = fileRepository.findByOwnerUserId(user.getUserId());
+
+        // Convert File entities to FetchFileResponse DTOs
+        return files.stream()
+                .map(file -> new FetchFileResponse(
+                        file.getId(),
+                        file.getFilename(),
+                        file.getDescription(),
+                        file.getCategory()
+                ))
+                .collect(Collectors.toList());
     }
 }
