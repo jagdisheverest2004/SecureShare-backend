@@ -8,6 +8,7 @@ import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.security.jwt.JwtUtils;
 import org.example.secureshare.security.request.LoginRequest;
 import org.example.secureshare.security.request.SignUpRequest;
+import org.example.secureshare.security.request.VerifyOtpRequest;
 import org.example.secureshare.security.response.MessageResponse;
 import org.example.secureshare.security.response.UserInfoResponse;
 import org.example.secureshare.security.services.UserDetailsImpl;
@@ -114,9 +115,9 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<?> verifyOtpAndLogin(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        String otp = request.get("otp");
+    public ResponseEntity<?> verifyOtpAndLogin(@RequestBody VerifyOtpRequest verifyOtpRequest) {
+        String username = verifyOtpRequest.getUsername();
+        String otp = verifyOtpRequest.getOtp();
 
         try {
             User user = userRepository.findByUsername(username)
