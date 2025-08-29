@@ -12,6 +12,7 @@ import org.example.secureshare.security.response.MessageResponse;
 import org.example.secureshare.security.response.UserInfoResponse;
 import org.example.secureshare.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
+import org.example.secureshare.service.KeyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +37,9 @@ public class AuthController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private KeyService keyService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -101,6 +107,16 @@ public class AuthController {
                 signUpRequest.getEmail(),
                 passwordEncoder.encode(signUpRequest.getPassword())
         );
+
+        try {
+            KeyPair keyPair = keyService.generateRsaKeyPair();
+            user.setPublicKey(keyService.convertPublicKeyToString(keyPair.getPublic()));
+            user.setPrivateKey(keyService.convertPrivateKeyToString(keyPair.getPrivate()));
+        } catch (NoSuchAlgorithmException e) {
+            return ResponseEntity
+                    .status(500)
+                    .body(new MessageResponse("Error: Key generation failed."));
+        }
 
         Role userRole = roleRepository.findByRoleName(AppRole.ROLE_USER)
                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));

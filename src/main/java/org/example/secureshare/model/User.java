@@ -47,4 +47,12 @@ public class User {
     @JoinColumn(name = "role_id")
     private Role role;
 
+    @Lob
+    @Column(name = "public_key")
+    private String publicKey;
+
+    @Lob
+    @Column(name = "private_key")
+    private String privateKey;
+
 }
