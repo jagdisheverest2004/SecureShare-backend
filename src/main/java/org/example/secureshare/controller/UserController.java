@@ -1,5 +1,6 @@
 package org.example.secureshare.controller;
 
+import org.example.secureshare.payload.FindUserNameRequest;
 import org.example.secureshare.payload.ForgotPasswordRequest;
 import org.example.secureshare.payload.MessageResponse;
 import org.example.secureshare.payload.ResetPasswordRequest;
@@ -40,7 +41,7 @@ public class UserController {
     }
 
     @PostMapping("/find-username")
-    public ResponseEntity<?> findUsername(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<?> findUsername(@RequestBody FindUserNameRequest request) {
         try {
             userService.findUsernameByEmail(request.getEmail());
             return ResponseEntity.ok(new MessageResponse("Your username has been sent to your registered email."));
