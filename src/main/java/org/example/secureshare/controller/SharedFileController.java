@@ -1,8 +1,10 @@
 package org.example.secureshare.controller;
 
+import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.model.User;
 import org.example.secureshare.payload.sharedfileDTO.SharedFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
+import org.example.secureshare.payload.sharedfileDTO.SharedFilesResponse;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.SharedFileService;
@@ -67,25 +69,33 @@ public class SharedFileController {
     }
 
     @GetMapping("/by-me")
-    public ResponseEntity<List<SharedFileResponse>> getFilesSharedByMe(
+    public ResponseEntity<SharedFilesResponse> getFilesSharedByMe(
             @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "sensitive", required = false) String sensitive
+            @RequestParam(value = "sensitive", required = false) String sensitive,
+            @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER,required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize",defaultValue = AppConstants.SHARED_FILES_PAGE_SIZE,required = false)  Integer pageSize,
+            @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_SHARED_FILES_BY,required = false) String sortBy,
+            @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_SHARED_FILES_DIR,required = false) String sortOrder
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedByMe(keyword, sensitive, username);
+        SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedByMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
         auditLogService.logAction(username, "FETCH_SHARED_FILES_BY_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 
     @GetMapping("/to-me")
-    public ResponseEntity<List<SharedFileResponse>> getFilesSharedToMe(
+    public ResponseEntity<SharedFilesResponse> getFilesSharedToMe(
             @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "sensitive", required = false) String sensitive
+            @RequestParam(value = "sensitive", required = false) String sensitive,
+            @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER,required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize",defaultValue = AppConstants.SHARED_FILES_PAGE_SIZE,required = false)  Integer pageSize,
+            @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_SHARED_FILES_BY,required = false) String sortBy,
+            @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_SHARED_FILES_DIR,required = false) String sortOrder
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedToMe(keyword,sensitive, username);
+        SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedToMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
         auditLogService.logAction(username, "FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }

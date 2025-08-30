@@ -1,7 +1,9 @@
 package org.example.secureshare.controller;
 
+import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.model.User;
 import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
+import org.example.secureshare.payload.fiteDTO.FetchFilesResponse;
 import org.example.secureshare.payload.fiteDTO.UploadFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.repository.FileRepository;
@@ -99,13 +101,17 @@ public class FileController {
 
     @GetMapping("/fetch-all")
     public ResponseEntity<?> fetchAllFilesForUser(
-            @RequestParam(value = "keyword", required = false) String keyword
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER,required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize",defaultValue = AppConstants.FILE_PAGE_SIZE,required = false)  Integer pageSize,
+            @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_FILES_BY,required = false) String sortBy,
+            @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_FILES_DIR,required = false) String sortOrder
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
         try {
-            List<FetchFileResponse> files = fileService.getAllFilesForUser(keyword,username);
+            FetchFilesResponse files = fileService.getAllFilesForUser(keyword, username, pageNumber, pageSize, sortBy, sortOrder);
             auditLogService.logAction(username, "FETCH_ALL_FILES", "");
             return ResponseEntity.ok(files);
         } catch (NoSuchElementException e) {
