@@ -67,7 +67,7 @@ public class JwtUtils {
     public ResponseCookie generateTokenFromCookie(UserDetailsImpl userPrincipal) {
         String jwt = generateTokenFromUserName(userPrincipal.getUsername());
         return ResponseCookie.from(jwtCookie, jwt)
-                .httpOnly(false)
+                .httpOnly(true)
                 .path("/api")
                 .maxAge(24*60*60) // 24 hours
                 .build();

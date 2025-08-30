@@ -1,5 +1,6 @@
 package org.example.secureshare.service;
 
+import jakarta.transaction.Transactional;
 import org.example.secureshare.model.User;
 import org.example.secureshare.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,5 +55,15 @@ public class UserService {
         message.setSubject("Username Retrieval Request");
         message.setText("Hello,\n\nYour username is: " + user.getUsername() + "\n\nIf you did not request this, please ignore this email.");
         mailSender.send(message);
+    }
+
+    @Transactional
+    public void deleteAccount(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
+
+        // This will trigger cascade delete for all related entities
+        // such as files, shared files, and audit logs, if correctly configured.
+        userRepository.delete(user);
     }
 }

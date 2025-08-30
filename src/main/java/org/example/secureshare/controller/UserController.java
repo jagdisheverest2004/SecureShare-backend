@@ -6,9 +6,15 @@ import org.example.secureshare.payload.MessageResponse;
 import org.example.secureshare.payload.userutilsDTO.ResetPasswordRequest;
 import org.example.secureshare.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
@@ -49,4 +55,31 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse(e.getMessage()));
         }
     }
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        try {
+            userService.deleteAccount(username);
+
+            // Invalidate the JWT cookie
+            ResponseCookie noCookie = ResponseCookie.from("your_jwt_cookie_name", "")
+                    .httpOnly(true)
+                    .secure(true) // Use true for HTTPS
+                    .path("/")
+                    .maxAge(0) // Immediately expire
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, noCookie.toString())
+                    .body(Map.of("message", "Account deleted successfully!"));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to delete account."));
+        }
+    }
+
 }

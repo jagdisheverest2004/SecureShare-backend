@@ -62,7 +62,9 @@ public class WebSecurityConfig {
                         authorizeRequests
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/otp/**").permitAll()
-                                .requestMatchers("/api/user-utils/**").permitAll()
+                                .requestMatchers("/api/user-utils/initiate").permitAll()
+                                .requestMatchers("/api/user-utils/reset").permitAll()
+                                .requestMatchers("/api/user-utils/find-username").permitAll()
                                 .requestMatchers("/h2-console/**").permitAll()
                                 .anyRequest().authenticated()
                 )
