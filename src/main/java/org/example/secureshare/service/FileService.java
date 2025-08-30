@@ -62,10 +62,10 @@ public class FileService {
     }
 
     @Transactional(readOnly = true)
-    public FetchFileResponse getFileByFilename(String filename, String username) {
+    public byte[] downloadFileById(Long fileId, String username) {
         try {
-            File file = fileRepository.findByFilename(filename)
-                    .orElseThrow(() -> new NoSuchElementException("File not found with filename: " + filename));
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
             User loggedInUser = userRepository.findByUsername(username)
                     .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
@@ -73,12 +73,20 @@ public class FileService {
                 throw new SecurityException("User is not authorized to access this file.");
             }
 
-            return new FetchFileResponse(file.getId(), file.getFilename(), file.getDescription(), file.getCategory());
+            // Decrypt the file data
+            PrivateKey ownerPrivateKey = keyService.decodePrivateKey(loggedInUser.getPrivateKey());
+            byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
+            byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, ownerPrivateKey);
+            SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
+            byte[] iv = Base64.getDecoder().decode(file.getIv());
+            byte[] decryptedFileData = keyService.decryptWithAesGcm(file.getEncryptedData(), decryptedAesKey, iv);
+
+            return decryptedFileData;
 
         } catch (NoSuchElementException | SecurityException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to decrypt file due to a cryptographic error.", e);
+            throw new RuntimeException("Failed to download file due to a cryptographic error.", e);
         }
     }
 

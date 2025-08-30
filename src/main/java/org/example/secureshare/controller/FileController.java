@@ -4,12 +4,15 @@ import org.example.secureshare.model.User;
 import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
 import org.example.secureshare.payload.fiteDTO.UploadFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
+import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.OtpService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +29,9 @@ public class FileController {
 
     @Autowired
     private FileService fileService;
+
+    @Autowired
+    private FileRepository fileRepository;
 
     @Autowired
     private OtpService otpService;
@@ -58,15 +64,28 @@ public class FileController {
         }
     }
 
-    @GetMapping("/fetch")
-    public ResponseEntity<?> fetchFile(@RequestParam("filename") String filename) {
+    @GetMapping("/download/{fileId}")
+    public ResponseEntity<?> downloadFileById(@PathVariable("fileId") Long fileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
         try {
-            FetchFileResponse response = fileService.getFileByFilename(filename, username);
-            auditLogService.logAction(username, "FILE_FETCH", filename);
-            return ResponseEntity.ok(response);
+            byte[] fileData = fileService.downloadFileById(fileId, username);
+
+            // Get original filename for the header
+            String originalFilename = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new NoSuchElementException("File not found.")).getFilename();
+
+            // Log the file download action
+            auditLogService.logAction(username, "FILE_DOWNLOAD", originalFilename);
+
+            // Set headers for file download
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", originalFilename);
+            headers.setContentLength(fileData.length);
+
+            return ResponseEntity.ok().headers(headers).body(fileData);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (SecurityException e) {
@@ -75,6 +94,8 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
+
+
 
     @GetMapping("/fetch-all")
     public ResponseEntity<?> fetchAllFilesForUser(
