@@ -44,7 +44,10 @@ public class SharedFileController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String senderUsername = authentication.getName();
-            User sender = userRepository.findByUsername(senderUsername).orElseThrow(() -> new NoSuchElementException("Sender user not found: " + senderUsername));
+            User sender = userRepository.findByUsername(senderUsername)
+                    .orElseThrow(() -> new NoSuchElementException("Sender user not found: " + senderUsername));
+            User recipient = userRepository.findByUsername(request.getRecipientUsername())
+                    .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + request.getRecipientUsername()));
 
             Long sharedFileId = fileService.shareFile(request.getFileId(), senderUsername, request.getRecipientUsername());
 
@@ -52,8 +55,8 @@ public class SharedFileController {
             sharedFileService.logFileShare(
                     request.getFileId(),
                     sharedFileId,
-                    userRepository.findByUsername(senderUsername).get().getUserId(),
-                    userRepository.findByUsername(request.getRecipientUsername()).get().getUserId(),
+                    sender.getUserId(),
+                    recipient.getUserId(),
                     request.getIsSensitive()
             );
 

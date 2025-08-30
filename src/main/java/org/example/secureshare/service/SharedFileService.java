@@ -34,12 +34,12 @@ public class SharedFileService {
     private FileRepository fileRepository;
 
     @Transactional
-    public void logFileShare(Long oldId, Long newId, Long senderId, Long recipientId, String isSensitive) {
-        File file = fileRepository.findById(newId)
-                .orElseThrow(() -> new NoSuchElementException("File not found: " + newId));
+    public void logFileShare(Long oldFileId, Long newFileId, Long senderId, Long recipientId, String isSensitive) {
+        File newFile = fileRepository.findById(newFileId)
+                .orElseThrow(() -> new NoSuchElementException("File not found: " + newFileId));
 
-        File originalFile = fileRepository.findById(oldId)
-                .orElseThrow(() -> new NoSuchElementException("File not found: " + oldId));
+        File originalFile = fileRepository.findById(oldFileId)
+                .orElseThrow(() -> new NoSuchElementException("File not found: " + oldFileId));
 
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new NoSuchElementException("Sender not found: " + senderId));
@@ -48,17 +48,16 @@ public class SharedFileService {
                 .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + recipientId));
 
         SharedFile log = new SharedFile();
-        log.setFile(file);
+        log.setFile(newFile);
         log.setOriginalFile(originalFile);
         log.setSender(sender);
         log.setRecipient(recipient);
-        log.setFilename(file.getFilename());
-        log.setCategory(file.getCategory());
+        log.setFilename(newFile.getFilename());
+        log.setCategory(newFile.getCategory());
         log.setIsSensitive(isSensitive);
         log.setSharedAt(LocalDateTime.now());
 
         sharedFileRepository.save(log);
-
     }
 
     @Transactional(readOnly = true)
