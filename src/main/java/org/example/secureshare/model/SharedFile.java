@@ -21,6 +21,10 @@ public class SharedFile {
     private File file;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_file_id")
+    private File originalFile; // This is the new field
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
     private User sender;
 

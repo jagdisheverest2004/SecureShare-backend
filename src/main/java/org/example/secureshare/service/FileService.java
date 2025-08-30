@@ -1,10 +1,12 @@
 package org.example.secureshare.service;
 
 import org.example.secureshare.model.File;
+import org.example.secureshare.model.SharedFile;
 import org.example.secureshare.model.User;
 import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
 import org.example.secureshare.payload.fiteDTO.FetchFilesResponse;
 import org.example.secureshare.repository.FileRepository;
+import org.example.secureshare.repository.SharedFileRepository;
 import org.example.secureshare.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,13 +25,15 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 public class FileService {
 
     @Autowired
     private FileRepository fileRepository;
+
+    @Autowired
+    private SharedFileRepository sharedFileRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -210,4 +214,59 @@ public class FileService {
         Pageable pageable = PageRequest.of(pageNumber -1, pageSize,sortByAndOrder);
         return pageable;
     }
+
+    @Transactional
+    public void deleteFile(Long fileId, String username, String deletionType, List<String> recipientUsernames) {
+        User owner = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
+
+        File originalFile = fileRepository.findById(fileId)
+                .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
+
+        // Authorization check: ensure the authenticated user owns the file
+        if (!originalFile.getOwner().getUserId().equals(owner.getUserId())) {
+            throw new SecurityException("User is not authorized to delete this file.");
+        }
+
+        switch (deletionType) {
+            case "me":
+                // Delete only the original file
+                fileRepository.delete(originalFile);
+                break;
+
+            case "everyone":
+                // 1. Find all shared copies of this file
+                List<SharedFile> allSharedFiles = sharedFileRepository.findBySenderUserIdAndFileId(owner.getUserId(), originalFile.getId());
+
+                // 2. Delete all the shared file records from the recipients' wallets
+                for (SharedFile sharedFile : allSharedFiles) {
+                    fileRepository.delete(sharedFile.getFile());
+                }
+
+                // 3. Finally, delete the original file from the sender's wallet
+                fileRepository.delete(originalFile);
+                break;
+
+            case "list":
+                if (recipientUsernames == null || recipientUsernames.isEmpty()) {
+                    throw new IllegalArgumentException("Recipient usernames cannot be empty for 'list' deletion.");
+                }
+
+                // 1. Find shared copies for the specified recipients
+                List<SharedFile> sharedFilesForRecipients = sharedFileRepository.findBySenderUserIdAndFileIdAndRecipientUsernameIn(owner.getUserId(), originalFile.getId(), recipientUsernames);
+
+                // 2. Delete the file records from the specified recipients' wallets
+                for (SharedFile sharedFile : sharedFilesForRecipients) {
+                    fileRepository.delete(sharedFile.getFile());
+                }
+
+                // 3. Keep the original file in the sender's wallet
+                fileRepository.delete(originalFile);
+                break;
+
+            default:
+                throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
+        }
+    }
+
 }

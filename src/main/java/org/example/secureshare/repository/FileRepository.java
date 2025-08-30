@@ -10,8 +10,11 @@ import java.util.Optional;
 
 
 @Repository
-public interface FileRepository extends JpaRepository<File, Long> , JpaSpecificationExecutor<File> {
-     Optional<File> findByFilename(String filename);
+public interface FileRepository extends JpaRepository<File, Long>, JpaSpecificationExecutor<File> {
+    Optional<File> findByFilename(String filename);
 
     List<File> findByOwnerUserId(Long userId);
+
+    // New method to find a file by its owner and filename
+    Optional<File> findByOwnerUsernameAndFilename(String username, String filename);
 }

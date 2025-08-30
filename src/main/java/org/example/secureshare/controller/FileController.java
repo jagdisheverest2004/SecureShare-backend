@@ -2,6 +2,7 @@ package org.example.secureshare.controller;
 
 import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.model.User;
+import org.example.secureshare.payload.fiteDTO.DeleteFileRequest;
 import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
 import org.example.secureshare.payload.fiteDTO.FetchFilesResponse;
 import org.example.secureshare.payload.fiteDTO.UploadFileResponse;
@@ -124,6 +125,29 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to retrieve files."));
+        }
+    }
+
+    @DeleteMapping("/delete/{fileId}")
+    public ResponseEntity<?> deleteFile(
+            @PathVariable Long fileId,
+            @RequestBody DeleteFileRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        try {
+            fileService.deleteFile(fileId, username, request.getDeletionType(), request.getRecipientUsernames());
+            auditLogService.logAction(username, "FILE_DELETED", "File ID: " + fileId + " (" + request.getDeletionType() + ")");
+            return ResponseEntity.ok(Map.of("message", "File deletion processed successfully."));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred during file deletion: " + e.getMessage()));
         }
     }
 
