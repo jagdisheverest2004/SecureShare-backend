@@ -31,7 +31,7 @@ public class JwtUtils {
     @Value("${spring.app.jwtSecret}")
     private String jwtSecret;
 
-    @Value("${spring.ecom.app.jwtCookieName}")
+    @Value("${spring.secure.app.jwtCookieName}")
     private String jwtCookie;
 
     //Getting JWT Token from Header
