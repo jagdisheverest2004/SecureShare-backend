@@ -229,25 +229,26 @@ public class FileService {
 
         switch (deletionType) {
             case "me":
-                // Delete only the original file. Due to database relationships,
-                // this should cascade and delete associated SharedFile records.
+                // Delete only the original file from the sender's account.
                 fileRepository.delete(originalFile);
                 break;
 
             case "everyone":
                 // 1. Find all shared copies (recipient's files) and their logs
-                List<SharedFile> allSharedFileLogs = sharedFileRepository.findBySenderUserIdAndFileId(owner.getUserId(), originalFile.getId());
+                List<SharedFile> allSharedFileLogs = sharedFileRepository.findBySenderUserIdAndOriginalFileId(owner.getUserId(), originalFile.getId());
 
                 // 2. Collect the file IDs of the recipient's copies
                 List<Long> recipientFileIds = allSharedFileLogs.stream()
                         .map(log -> log.getFile().getId())
                         .toList();
 
-                // 3. Delete all the recipient's file copies and the shared file logs
-                fileRepository.deleteAllById(recipientFileIds);
+                // 3. Delete the shared file logs FIRST
                 sharedFileRepository.deleteAll(allSharedFileLogs);
 
-                // 4. Finally, delete the original file from the sender's wallet
+                // 4. Then, delete all the recipient's file copies
+                fileRepository.deleteAllById(recipientFileIds);
+
+                // 5. Finally, delete the original file from the sender's wallet
                 fileRepository.delete(originalFile);
                 break;
 
@@ -257,18 +258,21 @@ public class FileService {
                 }
 
                 // 1. Find shared file logs for the specified recipients
-                List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findBySenderUserIdAndFileIdAndRecipientUsernameIn(owner.getUserId(), originalFile.getId(), recipientUsernames);
+                List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findBySenderUserIdAndOriginalFileIdAndRecipientUsernameIn(owner.getUserId(), originalFile.getId(), recipientUsernames);
 
                 // 2. Collect the file IDs of the recipient's copies
                 List<Long> recipientFilesToDeleteIds = sharedFileLogsForRecipients.stream()
                         .map(log -> log.getFile().getId())
                         .toList();
 
-                // 3. Delete the file records from the specified recipients' wallets
-                fileRepository.deleteAllById(recipientFilesToDeleteIds);
+                // 3. Delete the shared file logs FIRST
                 sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
 
-                // 4. Keep the original file in the sender's wallet
+                // 4. Then, delete the file records from the specified recipients' wallets
+                fileRepository.deleteAllById(recipientFilesToDeleteIds);
+
+                // 5. Finally, delete the original file from the sender's wallet
+                fileRepository.delete(originalFile);
                 break;
 
             default:

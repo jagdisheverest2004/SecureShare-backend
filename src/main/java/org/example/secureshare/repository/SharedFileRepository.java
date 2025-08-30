@@ -8,10 +8,7 @@ import java.util.List;
 
 @Repository
 public interface SharedFileRepository extends JpaRepository<SharedFile, Long>, JpaSpecificationExecutor<SharedFile> {
+    List<SharedFile> findBySenderUserIdAndOriginalFileId(Long userId, Long id);
 
-    // Find all sharing logs for a specific file sent by a user
-    List<SharedFile> findBySenderUserIdAndFileId(Long senderId, Long fileId);
-
-    // Find shared files for a specific file and a list of recipients
-    List<SharedFile> findBySenderUserIdAndFileIdAndRecipientUsernameIn(Long senderId, Long fileId, List<String> recipientUsernames);
+    List<SharedFile> findBySenderUserIdAndOriginalFileIdAndRecipientUsernameIn(Long userId, Long id, List<String> recipientUsernames);
 }

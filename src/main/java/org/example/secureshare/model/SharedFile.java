@@ -16,18 +16,22 @@ public class SharedFile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // This file is the copy in the recipient's wallet.
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "file_id")
     private File file;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // This file is the original in the sender's wallet.
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "original_file_id")
-    private File originalFile; // This is the new field
+    private File originalFile;
 
+    // The sender's details
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
     private User sender;
 
+    // The recipient's details
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")
     private User recipient;
