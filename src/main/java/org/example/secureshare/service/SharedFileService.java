@@ -30,7 +30,7 @@ public class SharedFileService {
     private FileRepository fileRepository;
 
     @Transactional
-    public void logFileShare(Long fileId, Long senderId, Long recipientId, boolean isSensitive) {
+    public void logFileShare(Long fileId, Long senderId, Long recipientId, String isSensitive) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new NoSuchElementException("File not found: " + fileId));
 
@@ -46,7 +46,7 @@ public class SharedFileService {
         log.setRecipient(recipient);
         log.setFilename(file.getFilename());
         log.setCategory(file.getCategory());
-        log.setSensitive(isSensitive);
+        log.setIsSensitive(isSensitive);
         log.setSharedAt(LocalDateTime.now());
 
         sharedFileRepository.save(log);
@@ -54,7 +54,7 @@ public class SharedFileService {
     }
 
     @Transactional(readOnly = true)
-    public List<SharedFileResponse> getFilesSharedByMe(String keyword, Boolean sensitive, String username) {
+    public List<SharedFileResponse> getFilesSharedByMe(String keyword, String sensitive, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
@@ -85,14 +85,14 @@ public class SharedFileService {
                         log.getRecipient().getUsername(),
                         log.getFilename(),
                         log.getCategory(),
-                        log.isSensitive(),
+                        log.getIsSensitive(),
                         log.getSharedAt()
                 ))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<SharedFileResponse> getFilesSharedToMe(String keyword, Boolean sensitive, String username) {
+    public List<SharedFileResponse> getFilesSharedToMe(String keyword, String sensitive, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
@@ -123,7 +123,7 @@ public class SharedFileService {
                         log.getRecipient().getUsername(),
                         log.getFilename(),
                         log.getCategory(),
-                        log.isSensitive(),
+                        log.getIsSensitive(),
                         log.getSharedAt()
                 ))
                 .collect(Collectors.toList());

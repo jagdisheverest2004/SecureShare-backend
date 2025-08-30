@@ -44,14 +44,14 @@ public class SharedFileController {
             String senderUsername = authentication.getName();
             User sender = userRepository.findByUsername(senderUsername).orElseThrow(() -> new NoSuchElementException("Sender user not found: " + senderUsername));
 
-            Long sharedFileId = fileService.shareFile(request.getFileId(), senderUsername, request.getRecipientUsername(), request.isSensitive());
+            Long sharedFileId = fileService.shareFile(request.getFileId(), senderUsername, request.getRecipientUsername());
 
             // Log the sharing transaction
             sharedFileService.logFileShare(
                     sharedFileId,
                     userRepository.findByUsername(senderUsername).get().getUserId(),
                     userRepository.findByUsername(request.getRecipientUsername()).get().getUserId(),
-                    request.isSensitive()
+                    request.getIsSensitive()
             );
 
             auditLogService.logAction(senderUsername, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
@@ -69,7 +69,7 @@ public class SharedFileController {
     @GetMapping("/by-me")
     public ResponseEntity<List<SharedFileResponse>> getFilesSharedByMe(
             @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "sensitive", required = false) Boolean sensitive
+            @RequestParam(value = "sensitive", required = false) String sensitive
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
@@ -81,7 +81,7 @@ public class SharedFileController {
     @GetMapping("/to-me")
     public ResponseEntity<List<SharedFileResponse>> getFilesSharedToMe(
             @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "sensitive", required = false) Boolean sensitive
+            @RequestParam(value = "sensitive", required = false) String sensitive
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();

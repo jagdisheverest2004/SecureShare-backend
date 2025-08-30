@@ -42,9 +42,9 @@ public class FileController {
     @Autowired
     private AuditLogService auditLogService;
 
-    @PostMapping("/upload")
+    @PostMapping("/upload/{file}")
     public ResponseEntity<?> uploadFile(
-            @RequestParam("file") MultipartFile file,
+            @PathVariable("file") MultipartFile file,
             @RequestParam("filename") String fileName,
             @RequestParam("description") String description,
             @RequestParam("category") String category) {

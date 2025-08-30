@@ -124,7 +124,7 @@ public class FileService {
     }
 
     @Transactional
-    public Long shareFile(Long fileId, String senderUsername, String recipientUsername, boolean isSensitive) {
+    public Long shareFile(Long fileId, String senderUsername, String recipientUsername) {
         try {
             // Fetch sender and recipient users
             User sender = userRepository.findByUsername(senderUsername)

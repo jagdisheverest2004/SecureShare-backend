@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class ShareFileRequest {
     private String recipientUsername;
     private Long fileId;
-    private boolean isSensitive;
+    private String isSensitive;
 }

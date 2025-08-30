@@ -30,6 +30,6 @@ public class SharedFile {
 
     private String filename;
     private String category;
-    private boolean isSensitive;
+    private String isSensitive;
     private LocalDateTime sharedAt;
 }
