@@ -44,10 +44,9 @@ public class FileController {
     @Autowired
     private AuditLogService auditLogService;
 
-    @PostMapping("/upload/{file}")
-    public ResponseEntity<?> uploadFile(
-            @PathVariable("file") MultipartFile file,
-            @RequestParam("filename") String fileName,
+    @PostMapping("/upload") // Changed the endpoint path
+    public ResponseEntity<?> uploadFiles(
+            @RequestParam("files") MultipartFile[] files, // Changed from single file to an array
             @RequestParam("description") String description,
             @RequestParam("category") String category) {
 
@@ -55,14 +54,21 @@ public class FileController {
         String username = authentication.getName();
 
         try {
-            Long fileId = fileService.storeFile(file, fileName, description, category, username);
-            UploadFileResponse response = new UploadFileResponse(fileId, fileName, "File uploaded successfully!");
-            auditLogService.logAction(username, "FILE_UPLOAD", fileName);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            // Call the service method with the array of files
+            List<Long> fileIds = fileService.storeFiles(files, description, category, username);
+
+            // Log each file upload
+            for(MultipartFile file : files) {
+                auditLogService.logAction(username, "FILE_UPLOAD", file.getOriginalFilename());
+            }
+
+            // Return a response with the list of file IDs
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", files.length + " files uploaded successfully!", "fileIds", fileIds));
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (RuntimeException | IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to upload files. " + e.getMessage()));
         }
     }
 

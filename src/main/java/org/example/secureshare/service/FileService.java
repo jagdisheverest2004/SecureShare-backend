@@ -19,6 +19,7 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -37,7 +38,23 @@ public class FileService {
     private KeyService keyService;
 
     @Transactional
-    public Long storeFile(MultipartFile file, String fileName, String description, String category, String username) throws IOException {
+    public List<Long> storeFiles(MultipartFile[] files, String description, String category, String username) throws IOException {
+        if (files == null || files.length == 0) {
+            throw new IllegalArgumentException("No files selected for upload.");
+        }
+
+        List<Long> uploadedFileIds = new ArrayList<>();
+        for (MultipartFile file : files) {
+            // Call a helper method to handle each file
+            Long fileId = this.storeSingleFile(file, description, category, username);
+            uploadedFileIds.add(fileId);
+        }
+        return uploadedFileIds;
+    }
+
+    // New helper method to handle a single file upload
+    @Transactional
+    public Long storeSingleFile(MultipartFile file, String description, String category, String username) throws IOException {
         try {
             if (file.isEmpty()) {
                 throw new IllegalArgumentException("File cannot be empty.");
@@ -56,7 +73,7 @@ public class FileService {
             );
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
-            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), fileName, description, category, owner);
+            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, owner);
             File savedFile = fileRepository.save(newFile);
             return savedFile.getId();
         } catch (IOException | NoSuchElementException | IllegalArgumentException e) {
