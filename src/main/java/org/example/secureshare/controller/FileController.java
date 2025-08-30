@@ -77,12 +77,14 @@ public class FileController {
     }
 
     @GetMapping("/fetch-all")
-    public ResponseEntity<?> fetchAllFilesForUser() {
+    public ResponseEntity<?> fetchAllFilesForUser(
+            @RequestParam(value = "keyword", required = false) String keyword
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
         try {
-            List<FetchFileResponse> files = fileService.getAllFilesForUser(username);
+            List<FetchFileResponse> files = fileService.getAllFilesForUser(keyword,username);
             auditLogService.logAction(username, "FETCH_ALL_FILES", "");
             return ResponseEntity.ok(files);
         } catch (NoSuchElementException e) {
@@ -92,21 +94,4 @@ public class FileController {
         }
     }
 
-    @PostMapping("/share/initiate")
-    public ResponseEntity<?> initiateFileShare(@RequestBody ShareFileRequest request) {
-        if (request.isSensitive()) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String senderUsername = authentication.getName();
-
-            User sender = userRepository.findByUsername(senderUsername).orElseThrow(() -> new NoSuchElementException("Sender not found: " + senderUsername));
-
-            String senderEmail = sender.getEmail();
-
-            otpService.generateAndSendOtp(senderEmail);
-            return ResponseEntity.ok(Map.of("message", "Sensitive file share initiated. OTP sent to your email."));
-        } else {
-            // For non-sensitive files, proceed to the final share endpoint immediately
-            return ResponseEntity.ok(Map.of("message", "File sharing initiated. No OTP required."));
-        }
-    }
 }

@@ -6,6 +6,7 @@ import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
 import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -82,11 +83,27 @@ public class FileService {
     }
 
     @Transactional(readOnly = true)
-    public List<FetchFileResponse> getAllFilesForUser(String username) {
+    public List<FetchFileResponse> getAllFilesForUser(String keyword, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
-        List<File> files = fileRepository.findByOwnerUserId(user.getUserId());
+        // Start with the base specification that filters by the owner's ID.
+        Specification<File> spec = (root, query, cb) -> cb.equal(root.get("owner").get("userId"), user.getUserId());
+
+        if (keyword != null && !keyword.isEmpty()) {
+            String likeKeyword = "%" + keyword.toLowerCase() + "%";
+
+            // Create a sub-specification for the keyword search using OR conditions.
+            Specification<File> keywordSpec = (root, query, cb) -> cb.like(cb.lower(root.get("category")), likeKeyword);
+            keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("description")), likeKeyword));
+            keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("filename")), likeKeyword));
+
+            // Combine the base specification with the keyword search specification.
+            spec = spec.and(keywordSpec);
+        }
+
+        // Pass the final, combined specification to the repository.
+        List<File> files = fileRepository.findAll(spec);
 
         return files.stream()
                 .map(file -> new FetchFileResponse(

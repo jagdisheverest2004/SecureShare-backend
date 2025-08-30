@@ -1,7 +1,6 @@
 package org.example.secureshare.controller;
 
 import org.example.secureshare.model.User;
-import org.example.secureshare.payload.MessageResponse;
 import org.example.secureshare.payload.sharedfileDTO.SharedFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.service.AuditLogService;
@@ -39,20 +38,11 @@ public class SharedFileController {
     private AuditLogService auditLogService;
 
     @PostMapping("/share")
-    public ResponseEntity<?> shareFile(@RequestBody ShareFileRequest request, @RequestParam(value = "otp", required = false) String otp) {
+    public ResponseEntity<?> shareFile(@RequestBody ShareFileRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String senderUsername = authentication.getName();
             User sender = userRepository.findByUsername(senderUsername).orElseThrow(() -> new NoSuchElementException("Sender user not found: " + senderUsername));
-
-            // OTP verification for sensitive files
-            if (request.isSensitive()) {
-
-                String senderEmail = sender.getEmail();
-                if (otp == null || !otpService.verifyOtp(senderEmail, otp)) {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new MessageResponse("Invalid or missing OTP for sensitive file share."));
-                }
-            }
 
             Long sharedFileId = fileService.shareFile(request.getFileId(), senderUsername, request.getRecipientUsername(), request.isSensitive());
 
@@ -77,19 +67,25 @@ public class SharedFileController {
     }
 
     @GetMapping("/by-me")
-    public ResponseEntity<List<SharedFileResponse>> getFilesSharedByMe() {
+    public ResponseEntity<List<SharedFileResponse>> getFilesSharedByMe(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "sensitive", required = false) Boolean sensitive
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedByMe(username);
+        List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedByMe(keyword, sensitive, username);
         auditLogService.logAction(username, "FETCH_SHARED_FILES_BY_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 
     @GetMapping("/to-me")
-    public ResponseEntity<List<SharedFileResponse>> getFilesSharedToMe() {
+    public ResponseEntity<List<SharedFileResponse>> getFilesSharedToMe(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "sensitive", required = false) Boolean sensitive
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedToMe(username);
+        List<SharedFileResponse> sharedFiles = sharedFileService.getFilesSharedToMe(keyword,sensitive, username);
         auditLogService.logAction(username, "FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }

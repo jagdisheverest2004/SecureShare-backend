@@ -8,6 +8,7 @@ import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.SharedFileRepository;
 import org.example.secureshare.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,14 +50,35 @@ public class SharedFileService {
         log.setSharedAt(LocalDateTime.now());
 
         sharedFileRepository.save(log);
+
     }
 
     @Transactional(readOnly = true)
-    public List<SharedFileResponse> getFilesSharedByMe(String username) {
+    public List<SharedFileResponse> getFilesSharedByMe(String keyword, Boolean sensitive, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
-        List<SharedFile> logs = sharedFileRepository.findBySenderUserId(user.getUserId());
+        // The base specification is a crucial filter for the logged-in user's ID.
+        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("sender").get("userId"), user.getUserId());
+
+        if (sensitive != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("isSensitive"), sensitive));
+        }
+
+        if (keyword != null && !keyword.isEmpty()) {
+            String likeKeyword = "%" + keyword.toLowerCase() + "%";
+
+            // Use a sub-specification with `OR` conditions for the keyword search.
+            Specification<SharedFile> keywordSpec = (root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("filename")), likeKeyword),
+                    cb.like(cb.lower(root.get("category")), likeKeyword),
+                    cb.like(cb.lower(root.get("recipient").get("username")), likeKeyword)
+            );
+            spec = spec.and(keywordSpec);
+        }
+
+        List<SharedFile> logs = sharedFileRepository.findAll(spec);
+
         return logs.stream()
                 .map(log -> new SharedFileResponse(
                         log.getSender().getUsername(),
@@ -70,11 +92,31 @@ public class SharedFileService {
     }
 
     @Transactional(readOnly = true)
-    public List<SharedFileResponse> getFilesSharedToMe(String username) {
+    public List<SharedFileResponse> getFilesSharedToMe(String keyword, Boolean sensitive, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
-        List<SharedFile> logs = sharedFileRepository.findByRecipientUserId(user.getUserId());
+        // The base specification filters for the authenticated user as the recipient.
+        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("recipient").get("userId"), user.getUserId());
+
+        if (sensitive != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("isSensitive"), sensitive));
+        }
+
+        if (keyword != null && !keyword.isEmpty()) {
+            String likeKeyword = "%" + keyword.toLowerCase() + "%";
+
+            // Use a sub-specification with `OR` conditions for the keyword search.
+            Specification<SharedFile> keywordSpec = (root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("filename")), likeKeyword),
+                    cb.like(cb.lower(root.get("category")), likeKeyword),
+                    cb.like(cb.lower(root.get("sender").get("username")), likeKeyword)
+            );
+            spec = spec.and(keywordSpec);
+        }
+
+        List<SharedFile> logs = sharedFileRepository.findAll(spec);
+
         return logs.stream()
                 .map(log -> new SharedFileResponse(
                         log.getSender().getUsername(),
