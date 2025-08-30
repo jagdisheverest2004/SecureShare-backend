@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 public class SharedFileService {
@@ -35,9 +34,12 @@ public class SharedFileService {
     private FileRepository fileRepository;
 
     @Transactional
-    public void logFileShare(Long fileId, Long senderId, Long recipientId, String isSensitive) {
-        File file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new NoSuchElementException("File not found: " + fileId));
+    public void logFileShare(Long oldId, Long newId, Long senderId, Long recipientId, String isSensitive) {
+        File file = fileRepository.findById(newId)
+                .orElseThrow(() -> new NoSuchElementException("File not found: " + newId));
+
+        File originalFile = fileRepository.findById(oldId)
+                .orElseThrow(() -> new NoSuchElementException("File not found: " + oldId));
 
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new NoSuchElementException("Sender not found: " + senderId));
@@ -47,6 +49,7 @@ public class SharedFileService {
 
         SharedFile log = new SharedFile();
         log.setFile(file);
+        log.setOriginalFile(originalFile);
         log.setSender(sender);
         log.setRecipient(recipient);
         log.setFilename(file.getFilename());

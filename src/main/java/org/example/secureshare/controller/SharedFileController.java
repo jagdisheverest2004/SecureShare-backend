@@ -50,6 +50,7 @@ public class SharedFileController {
 
             // Log the sharing transaction
             sharedFileService.logFileShare(
+                    request.getFileId(),
                     sharedFileId,
                     userRepository.findByUsername(senderUsername).get().getUserId(),
                     userRepository.findByUsername(request.getRecipientUsername()).get().getUserId(),
