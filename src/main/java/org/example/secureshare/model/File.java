@@ -30,6 +30,7 @@ public class File {
     private String filename;
     private String description;
     private String category;
+    private String contentType; // New field to store the MIME type
     private LocalDateTime timestamp;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,24 +41,26 @@ public class File {
     @JoinColumn(name = "original_file_id")
     private File originalFile;
 
-    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, User owner) {
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, User owner) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
         this.iv = iv;
         this.filename = filename;
         this.description = description;
         this.category = category;
+        this.contentType = contentType;
         this.owner = owner;
         this.timestamp = LocalDateTime.now();
     }
 
-    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, User owner, File originalFile) {
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, User owner, File originalFile) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
         this.iv = iv;
         this.filename = filename;
         this.description = description;
         this.category = category;
+        this.contentType = contentType;
         this.owner = owner;
         this.originalFile = originalFile;
         this.timestamp = LocalDateTime.now();

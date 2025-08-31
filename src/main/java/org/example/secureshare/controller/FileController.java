@@ -79,18 +79,18 @@ public class FileController {
         String username = authentication.getName();
 
         try {
-            byte[] fileData = fileService.downloadFileById(fileId, username);
-
-            // Get original filename for the header
-            String originalFilename = fileRepository.findById(fileId)
-                    .orElseThrow(() -> new NoSuchElementException("File not found.")).getFilename();
+            // New service method to return both data and metadata
+            Map<String, Object> fileDownloadData = fileService.downloadFileAndGetMetadata(fileId, username);
+            byte[] fileData = (byte[]) fileDownloadData.get("fileData");
+            String originalFilename = (String) fileDownloadData.get("originalFilename");
+            String contentType = (String) fileDownloadData.get("contentType");
 
             // Log the file download action
             auditLogService.logAction(authUtil.getLoggedInUser(), "FILE_DOWNLOAD", originalFilename);
 
             // Set headers for file download
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentType(MediaType.parseMediaType(contentType)); // Use the correct content type
             headers.setContentDispositionFormData("attachment", originalFilename);
             headers.setContentLength(fileData.length);
 
@@ -103,8 +103,6 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
-
-
 
     @GetMapping("/fetch-all")
     public ResponseEntity<?> fetchAllFilesForUser(

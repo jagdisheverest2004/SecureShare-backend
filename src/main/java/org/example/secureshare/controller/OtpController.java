@@ -26,10 +26,7 @@ public class OtpController {
     @PostMapping("/send")
     public ResponseEntity<?> sendOtp(@RequestBody OtpRequest request) {
         try {
-            User user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new NoSuchElementException("User not found with email: " + request.getEmail()));
-
-            otpService.generateAndSendOtp(user.getEmail());
+            otpService.generateAndSendOtp(request.getEmail());
             return ResponseEntity.ok(new MessageResponse("OTP sent successfully to your email."));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));

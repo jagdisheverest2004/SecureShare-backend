@@ -23,7 +23,9 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
@@ -76,7 +78,7 @@ public class FileService {
             );
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
-            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, owner, null);
+            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, file.getContentType(), owner); // Pass contentType
             File savedFile = fileRepository.save(newFile);
 
             savedFile.setOriginalFile(savedFile);
@@ -91,7 +93,7 @@ public class FileService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] downloadFileById(Long fileId, String username) {
+    public Map<String, Object> downloadFileAndGetMetadata(Long fileId, String username) {
         try {
             File file = fileRepository.findById(fileId)
                     .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
@@ -109,7 +111,11 @@ public class FileService {
             byte[] iv = Base64.getDecoder().decode(file.getIv());
             byte[] decryptedFileData = keyService.decryptWithAesGcm(file.getEncryptedData(), decryptedAesKey, iv);
 
-            return decryptedFileData;
+            Map<String, Object> result = new HashMap<>();
+            result.put("fileData", decryptedFileData);
+            result.put("originalFilename", file.getFilename());
+            result.put("contentType", file.getContentType());
+            return result;
 
         } catch (NoSuchElementException | SecurityException | IllegalArgumentException e) {
             throw e;
@@ -187,6 +193,7 @@ public class FileService {
                     originalFile.getFilename(),
                     originalFile.getDescription(),
                     originalFile.getCategory(),
+                    originalFile.getContentType(), // Pass contentType
                     recipient,
                     originalFile // Set the original file reference here
             );
