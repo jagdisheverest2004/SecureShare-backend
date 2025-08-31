@@ -3,10 +3,9 @@ package org.example.secureshare.controller;
 import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.payload.auditDTO.AuditLogsResponse;
 import org.example.secureshare.service.AuditLogService;
+import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +18,9 @@ public class AuditLogController {
     @Autowired
     private AuditLogService auditLogService;
 
+    @Autowired
+    private AuthUtil authUtil;
+
     @GetMapping("/my-logs")
     public ResponseEntity<AuditLogsResponse> getMyLogs(
             @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER,required = false) Integer pageNumber,
@@ -26,10 +28,7 @@ public class AuditLogController {
             @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_AUDIT_LOGS_BY,required = false) String sortBy,
             @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_AUDIT_LOGS_DIR,required = false) String sortOrder
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-
-        AuditLogsResponse logs = auditLogService.getLogsForUser(username, pageNumber, pageSize, sortBy, sortOrder);
+        AuditLogsResponse logs = auditLogService.getLogsForUser(authUtil.getLoggedInUser(), pageNumber, pageSize, sortBy, sortOrder);
         return ResponseEntity.ok(logs);
     }
 }

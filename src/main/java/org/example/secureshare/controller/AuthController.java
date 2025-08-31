@@ -101,7 +101,7 @@ public class AuthController {
 
         user.setRole(userRole);
         userRepository.save(user);
-        auditLogService.logAction(user,user.getUsername(), "USER_REGISTERED", "");
+        auditLogService.logAction(user, "USER_REGISTERED", "");
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
@@ -151,7 +151,7 @@ public class AuthController {
                         jwtCookie.toString()
                 );
 
-                auditLogService.logAction(user,username, "USER_SIGNED_IN" , "");
+                auditLogService.logAction(user, "USER_SIGNED_IN" , "");
                 return ResponseEntity.ok()
                         .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                         .body(userInfoResponse);
@@ -171,7 +171,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "User signed out successfully!");
         response.put("status", true);
-        auditLogService.logAction(user, user.getUsername(), "USER_SIGN_OUT", "");
+        auditLogService.logAction(user, "USER_SIGN_OUT", "");
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
     }
 }

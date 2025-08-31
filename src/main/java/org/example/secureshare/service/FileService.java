@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 public class FileService {
@@ -49,14 +50,12 @@ public class FileService {
 
         List<Long> uploadedFileIds = new ArrayList<>();
         for (MultipartFile file : files) {
-            // Call a helper method to handle each file
             Long fileId = this.storeSingleFile(file, description, category, username);
             uploadedFileIds.add(fileId);
         }
         return uploadedFileIds;
     }
 
-    // New helper method to handle a single file upload
     @Transactional
     public Long storeSingleFile(MultipartFile file, String description, String category, String username) throws IOException {
         try {
@@ -77,8 +76,11 @@ public class FileService {
             );
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
-            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(),description, category, owner);
+            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, owner, null);
             File savedFile = fileRepository.save(newFile);
+
+            savedFile.setOriginalFile(savedFile);
+            fileRepository.save(savedFile);
 
             return savedFile.getId();
         } catch (IOException | NoSuchElementException | IllegalArgumentException e) {
@@ -100,7 +102,6 @@ public class FileService {
                 throw new SecurityException("User is not authorized to access this file.");
             }
 
-            // Decrypt the file data
             PrivateKey ownerPrivateKey = keyService.decodePrivateKey(loggedInUser.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, ownerPrivateKey);
@@ -124,22 +125,18 @@ public class FileService {
 
         Pageable pageable = getPageable(pageNumber, pageSize, sortBy, sortOrder);
 
-        // Start with the base specification that filters by the owner's ID.
         Specification<File> spec = (root, query, cb) -> cb.equal(root.get("owner").get("userId"), user.getUserId());
 
         if (keyword != null && !keyword.isEmpty()) {
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
-            // Create a sub-specification for the keyword search using OR conditions.
             Specification<File> keywordSpec = (root, query, cb) -> cb.like(cb.lower(root.get("category")), likeKeyword);
             keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("description")), likeKeyword));
             keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("filename")), likeKeyword));
 
-            // Combine the base specification with the keyword search specification.
             spec = spec.and(keywordSpec);
         }
 
-        // Pass the final, combined specification to the repository.
         Page<File> files = fileRepository.findAll(spec, pageable);
         FetchFilesResponse response = new FetchFilesResponse();
         List<FetchFileResponse> fetchFileResponses = files.stream()
@@ -147,8 +144,8 @@ public class FileService {
                         file.getId(),
                         file.getFilename(),
                         file.getDescription(),
-                        file.getCategory()
-                        ,file.getTimestamp()
+                        file.getCategory(),
+                        file.getTimestamp()
                 ))
                 .toList();
         response.setFetchFiles(fetchFileResponses);
@@ -163,34 +160,26 @@ public class FileService {
     @Transactional
     public Long shareFile(Long fileId, String senderUsername, String recipientUsername) {
         try {
-            // Fetch sender and recipient users
             User sender = userRepository.findByUsername(senderUsername)
                     .orElseThrow(() -> new NoSuchElementException("Sender not found: " + senderUsername));
-
             User recipient = userRepository.findByUsername(recipientUsername)
                     .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + recipientUsername));
-
-            // Fetch the file to be shared
             File originalFile = fileRepository.findById(fileId)
                     .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
 
-            // Authorization check: ensure sender owns the file
             if (!originalFile.getOwner().getUserId().equals(sender.getUserId())) {
                 throw new SecurityException("User is not authorized to share this file.");
             }
 
-            // 1. Decrypt AES key with sender's private key
             PrivateKey senderPrivateKey = keyService.decodePrivateKey(sender.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFile.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, senderPrivateKey);
             SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
 
-            // 2. Encrypt the same AES key with the recipient's public key
             PublicKey recipientPublicKey = keyService.decodePublicKey(recipient.getPublicKey());
             byte[] encryptedAesKeyForRecipientBytes = keyService.encryptWithRsa(keyService.getAesKeyBytes(decryptedAesKey), recipientPublicKey);
             String encryptedAesKeyForRecipientBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyForRecipientBytes);
 
-            // 3. Create a new File entry for the recipient
             File sharedFile = new File(
                     originalFile.getEncryptedData(),
                     encryptedAesKeyForRecipientBase64,
@@ -198,7 +187,8 @@ public class FileService {
                     originalFile.getFilename(),
                     originalFile.getDescription(),
                     originalFile.getCategory(),
-                    recipient
+                    recipient,
+                    originalFile // Set the original file reference here
             );
             File savedFile = fileRepository.save(sharedFile);
 
@@ -218,7 +208,7 @@ public class FileService {
     }
 
     @Transactional
-    public void deleteFile(Long fileId, String username) {
+    public void deleteFile(Long fileId, String username, String deletionType, List<String> recipientUsernames) {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
@@ -229,10 +219,56 @@ public class FileService {
             throw new SecurityException("User is not authorized to delete this file.");
         }
 
-        // Delete associated SharedFile entries first
-        List<SharedFile> sharedFiles = sharedFileRepository.findByOriginalFileId(fileId);
-        sharedFileRepository.deleteAll(sharedFiles);
-        fileRepository.delete(originalFile);
-    }
+        switch (deletionType) {
+            case "me":
+                // Delete only the original file from the sender's account.
+                fileRepository.delete(originalFile);
+                break;
 
+            case "everyone":
+                // 1. Find all shared copies (recipient's files) and their logs
+                List<SharedFile> allSharedFileLogs = sharedFileRepository.findByOriginalFile_Id(originalFile.getId());
+
+                // 2. Collect the file IDs of the recipient's copies
+                List<Long> recipientFileIds = allSharedFileLogs.stream()
+                        .map(log -> log.getFile().getId())
+                        .toList();
+
+                // 3. Delete the shared file logs FIRST
+                sharedFileRepository.deleteAll(allSharedFileLogs);
+
+                // 4. Then, delete all the recipient's file copies
+                fileRepository.deleteAllById(recipientFileIds);
+
+                // 5. Finally, delete the original file from the sender's wallet
+                fileRepository.delete(originalFile);
+                break;
+
+            case "list":
+                if (recipientUsernames == null || recipientUsernames.isEmpty()) {
+                    throw new IllegalArgumentException("Recipient usernames cannot be empty for 'list' deletion.");
+                }
+
+                // 1. Find the shared file logs for the specified recipients
+                List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findByOriginalFile_IdAndRecipient_UsernameIn(originalFile.getId(), recipientUsernames);
+
+                // 2. Collect the file IDs of the recipient's copies
+                List<Long> recipientFilesToDeleteIds = sharedFileLogsForRecipients.stream()
+                        .map(log -> log.getFile().getId())
+                        .toList();
+
+                // 3. Delete the shared file logs FIRST
+                sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
+
+                // 4. Then, delete the file records from the specified recipients' wallets
+                fileRepository.deleteAllById(recipientFilesToDeleteIds);
+
+                // 5. Delete the original file from the sender's wallet
+                fileRepository.delete(originalFile);
+
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
+        }
+    }
 }

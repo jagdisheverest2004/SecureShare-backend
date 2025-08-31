@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Entity
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class File {
 
     @Id
@@ -26,7 +25,7 @@ public class File {
 
     @Lob
     @Column(columnDefinition = "TEXT")
-    private String iv; // Initialization Vector for GCM
+    private String iv;
 
     private String filename;
     private String description;
@@ -37,7 +36,10 @@ public class File {
     @JoinColumn(name = "owner_user_id")
     private User owner;
 
-    // Custom constructor to avoid circular dependency with Lombok's @AllArgsConstructor
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_file_id")
+    private File originalFile;
+
     public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, User owner) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
@@ -49,5 +51,15 @@ public class File {
         this.timestamp = LocalDateTime.now();
     }
 
-
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, User owner, File originalFile) {
+        this.encryptedData = encryptedData;
+        this.encryptedAesKey = encryptedAesKey;
+        this.iv = iv;
+        this.filename = filename;
+        this.description = description;
+        this.category = category;
+        this.owner = owner;
+        this.originalFile = originalFile;
+        this.timestamp = LocalDateTime.now();
+    }
 }

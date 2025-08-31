@@ -22,19 +22,19 @@ public class AuditLogService {
     private AuditLogRepository auditLogRepository;
 
     @Transactional
-    public void logAction(User user , String username, String action, String filename) {
-        AuditLog log = new AuditLog(user,username, action, filename);
+    public void logAction(User user , String action, String filename) {
+        AuditLog log = new AuditLog(user, action, filename);
         auditLogRepository.save(log);
     }
 
     @Transactional(readOnly = true)
-    public AuditLogsResponse getLogsForUser(String username, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+    public AuditLogsResponse getLogsForUser(User user, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Pageable pageable = getPageable(pageNumber, pageSize, sortBy, sortOrder);
-        Page<AuditLog> logs = auditLogRepository.findByUsername(username, pageable);
+        Page<AuditLog> logs = auditLogRepository.findByUser(user, pageable);
 
         List<AuditLogResponse> auditLogResponses = logs.getContent().stream().map(log -> {
             AuditLogResponse response = new AuditLogResponse();
-            response.setUsername(log.getUsername());
+            response.setUsername(log.getUser().getUsername());
             response.setAction(log.getAction());
             response.setFilename(log.getFilename());
             response.setTimestamp(log.getTimestamp());

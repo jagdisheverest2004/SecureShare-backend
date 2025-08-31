@@ -3,10 +3,7 @@ package org.example.secureshare.controller;
 import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.model.User;
 import org.example.secureshare.payload.fiteDTO.DeleteFileRequest;
-import org.example.secureshare.payload.fiteDTO.FetchFileResponse;
 import org.example.secureshare.payload.fiteDTO.FetchFilesResponse;
-import org.example.secureshare.payload.fiteDTO.UploadFileResponse;
-import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.service.AuditLogService;
@@ -64,7 +61,7 @@ public class FileController {
 
             for(MultipartFile file : files) {
                 // Pass the User object instead of the username
-                auditLogService.logAction(loggedInUser, username,"FILE_UPLOAD", file.getOriginalFilename());
+                auditLogService.logAction(loggedInUser, "FILE_UPLOAD", file.getOriginalFilename());
             }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", files.length + " files uploaded successfully!", "fileIds", fileIds));
@@ -89,7 +86,7 @@ public class FileController {
                     .orElseThrow(() -> new NoSuchElementException("File not found.")).getFilename();
 
             // Log the file download action
-            auditLogService.logAction(authUtil.getLoggedInUser(),username, "FILE_DOWNLOAD", originalFilename);
+            auditLogService.logAction(authUtil.getLoggedInUser(), "FILE_DOWNLOAD", originalFilename);
 
             // Set headers for file download
             HttpHeaders headers = new HttpHeaders();
@@ -122,7 +119,7 @@ public class FileController {
 
         try {
             FetchFilesResponse files = fileService.getAllFilesForUser(keyword, username, pageNumber, pageSize, sortBy, sortOrder);
-            auditLogService.logAction(authUtil.getLoggedInUser(),username, "FETCH_ALL_FILES", "");
+            auditLogService.logAction(authUtil.getLoggedInUser(), "FETCH_ALL_FILES", "");
             return ResponseEntity.ok(files);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -134,14 +131,16 @@ public class FileController {
     // Change to POST with a request body
     @PostMapping("/delete/{fileId}")
     public ResponseEntity<?> deleteFile(
-            @PathVariable Long fileId) {
+            @PathVariable Long fileId,
+            @RequestBody DeleteFileRequest deleteFileRequest
+    ) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
         try {
-            fileService.deleteFile(fileId, username);
-            auditLogService.logAction(authUtil.getLoggedInUser(), username ,"FILE_DELETE", "File ID: " + fileId);
+            fileService.deleteFile(fileId, username , deleteFileRequest.getDeletionType(),deleteFileRequest.getRecipientUsernames());
+            auditLogService.logAction(authUtil.getLoggedInUser(), "FILE_DELETE", "File ID: " + fileId);
             return ResponseEntity.ok(Map.of("message", "File deletion processed successfully."));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));

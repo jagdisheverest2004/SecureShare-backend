@@ -2,13 +2,11 @@ package org.example.secureshare.controller;
 
 import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.model.User;
-import org.example.secureshare.payload.sharedfileDTO.SharedFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.payload.sharedfileDTO.SharedFilesResponse;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.SharedFileService;
-import org.example.secureshare.service.OtpService;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
+
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -61,7 +59,7 @@ public class SharedFileController {
                     request.getIsSensitive()
             );
 
-            auditLogService.logAction(sender,senderUsername, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
+            auditLogService.logAction(sender, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "File shared successfully!"));
 
         } catch (NoSuchElementException e) {
@@ -85,7 +83,7 @@ public class SharedFileController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedByMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
-        auditLogService.logAction(authUtil.getLoggedInUser(),username, "FETCH_SHARED_FILES_BY_ME", "");
+        auditLogService.logAction(authUtil.getLoggedInUser(), "FETCH_SHARED_FILES_BY_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 
@@ -101,7 +99,7 @@ public class SharedFileController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedToMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
-        auditLogService.logAction(authUtil.getLoggedInUser(),username, "FETCH_SHARED_FILES_TO_ME", "");
+        auditLogService.logAction(authUtil.getLoggedInUser(), "FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 }

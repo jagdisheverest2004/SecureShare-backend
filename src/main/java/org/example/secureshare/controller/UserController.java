@@ -66,6 +66,7 @@ public class UserController {
         String username = authentication.getName();
 
         try {
+            System.out.println("Deleting account for user: " + username);
             userService.deleteAccount(username);
 
             // Invalidate the JWT cookie

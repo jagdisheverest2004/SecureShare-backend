@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,19 +19,22 @@ public class SharedFile {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "file_id")
+    @JsonIgnore
     private File file;
 
-    // This is the new field that links to the original file.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "original_file_id")
+    @JsonIgnore
     private File originalFile;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
+    @JsonIgnore
     private User sender;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")
+    @JsonIgnore
     private User recipient;
 
     private String filename;
