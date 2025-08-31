@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class FetchFileResponse {
     private Long id;
-    private String fileName;
+    private String filename;
     private String description;
     private String category;
     private LocalDateTime createdAt;

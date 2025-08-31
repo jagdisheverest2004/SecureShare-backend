@@ -73,14 +73,17 @@ public class FileController {
         }
     }
 
+    // Inside the downloadFileById method
+
     @GetMapping("/download/{fileId}")
     public ResponseEntity<?> downloadFileById(@PathVariable("fileId") Long fileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
         try {
-            // New service method to return both data and metadata
+            // Retrieve both the file data and its metadata, including the original filename
             Map<String, Object> fileDownloadData = fileService.downloadFileAndGetMetadata(fileId, username);
+
             byte[] fileData = (byte[]) fileDownloadData.get("fileData");
             String originalFilename = (String) fileDownloadData.get("originalFilename");
             String contentType = (String) fileDownloadData.get("contentType");
@@ -90,7 +93,9 @@ public class FileController {
 
             // Set headers for file download
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType(contentType)); // Use the correct content type
+            // Set the content type based on the stored value
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            // Use the originalFilename for the Content-Disposition header
             headers.setContentDispositionFormData("attachment", originalFilename);
             headers.setContentLength(fileData.length);
 

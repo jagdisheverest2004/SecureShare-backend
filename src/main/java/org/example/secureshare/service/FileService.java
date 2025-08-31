@@ -58,6 +58,8 @@ public class FileService {
         return uploadedFileIds;
     }
 
+    // Inside the storeSingleFile method
+
     @Transactional
     public Long storeSingleFile(MultipartFile file, String description, String category, String username) throws IOException {
         try {
@@ -78,7 +80,8 @@ public class FileService {
             );
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
-            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, file.getContentType(), owner); // Pass contentType
+            // Make sure to pass the filename from the MultipartFile to your File constructor
+            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, file.getContentType(), owner);
             File savedFile = fileRepository.save(newFile);
 
             savedFile.setOriginalFile(savedFile);
@@ -92,6 +95,7 @@ public class FileService {
         }
     }
 
+    // Add this new method to handle both data and metadata retrieval
     @Transactional(readOnly = true)
     public Map<String, Object> downloadFileAndGetMetadata(Long fileId, String username) {
         try {
