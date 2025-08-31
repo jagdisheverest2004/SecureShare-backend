@@ -62,8 +62,7 @@ public class UserService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
-        // This will trigger cascade delete for all related entities
-        // such as files, shared files, and audit logs, if correctly configured.
+
         userRepository.delete(user);
     }
 }

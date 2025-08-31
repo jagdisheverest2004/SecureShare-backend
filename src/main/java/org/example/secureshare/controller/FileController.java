@@ -134,14 +134,13 @@ public class FileController {
     // Change to POST with a request body
     @PostMapping("/delete/{fileId}")
     public ResponseEntity<?> deleteFile(
-            @PathVariable Long fileId,
-            @RequestBody DeleteFileRequest request) {
+            @PathVariable Long fileId) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
         try {
-            fileService.deleteFile(fileId, username, request.getDeletionType(), request.getRecipientUsernames());
+            fileService.deleteFile(fileId, username);
             auditLogService.logAction(authUtil.getLoggedInUser(), username ,"FILE_DELETE", "File ID: " + fileId);
             return ResponseEntity.ok(Map.of("message", "File deletion processed successfully."));
         } catch (NoSuchElementException e) {

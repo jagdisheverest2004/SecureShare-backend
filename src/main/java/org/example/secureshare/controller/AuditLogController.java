@@ -1,8 +1,7 @@
 package org.example.secureshare.controller;
 
 import org.example.secureshare.config.AppConstants;
-import org.example.secureshare.model.AuditLog;
-import org.example.secureshare.payload.auditDTO.AuditLogsReponse;
+import org.example.secureshare.payload.auditDTO.AuditLogsResponse;
 import org.example.secureshare.service.AuditLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,7 @@ public class AuditLogController {
     private AuditLogService auditLogService;
 
     @GetMapping("/my-logs")
-    public ResponseEntity<AuditLogsReponse> getMyLogs(
+    public ResponseEntity<AuditLogsResponse> getMyLogs(
             @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER,required = false) Integer pageNumber,
             @RequestParam(name = "pageSize",defaultValue = AppConstants.AUDIT_LOGS_PAGE_SIZE,required = false)  Integer pageSize,
             @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_AUDIT_LOGS_BY,required = false) String sortBy,
@@ -30,7 +29,7 @@ public class AuditLogController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        AuditLogsReponse logs = auditLogService.getLogsForUser(username, pageNumber, pageSize, sortBy, sortOrder);
+        AuditLogsResponse logs = auditLogService.getLogsForUser(username, pageNumber, pageSize, sortBy, sortOrder);
         return ResponseEntity.ok(logs);
     }
 }

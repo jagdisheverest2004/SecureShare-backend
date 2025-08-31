@@ -77,12 +77,8 @@ public class FileService {
             );
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
-            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, owner);
+            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(),description, category, owner);
             File savedFile = fileRepository.save(newFile);
-
-            // Set the originalFile reference to itself and save again
-            savedFile.setOriginalFile(savedFile);
-            fileRepository.save(savedFile);
 
             return savedFile.getId();
         } catch (IOException | NoSuchElementException | IllegalArgumentException e) {
@@ -152,6 +148,7 @@ public class FileService {
                         file.getFilename(),
                         file.getDescription(),
                         file.getCategory()
+                        ,file.getTimestamp()
                 ))
                 .toList();
         response.setFetchFiles(fetchFileResponses);
@@ -201,8 +198,7 @@ public class FileService {
                     originalFile.getFilename(),
                     originalFile.getDescription(),
                     originalFile.getCategory(),
-                    recipient,
-                    originalFile
+                    recipient
             );
             File savedFile = fileRepository.save(sharedFile);
 
@@ -222,7 +218,7 @@ public class FileService {
     }
 
     @Transactional
-    public void deleteFile(Long fileId, String username, String deletionType, List<String> recipientUsernames) {
+    public void deleteFile(Long fileId, String username) {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
 
@@ -233,46 +229,10 @@ public class FileService {
             throw new SecurityException("User is not authorized to delete this file.");
         }
 
-        switch (deletionType) {
-            case "me":
-                // 1. Find the shared logs that reference the original file
-                List<SharedFile> allSharedLogs = sharedFileRepository.findByOriginalFileId(originalFile.getId());
-
-                // 2. Delete the shared logs
-                sharedFileRepository.deleteAll(allSharedLogs);
-
-                // 3. Delete the original file
-                fileRepository.delete(originalFile);
-                break;
-
-            case "everyone":
-                // 1. Find all shared copies (recipient's files)
-                List<File> allSharedCopies = fileRepository.findByOriginalFileIdAndOwnerUserIdNot(originalFile.getId(), owner.getUserId());
-
-                // 2. Delete the files and their associated logs
-                fileRepository.deleteAll(allSharedCopies);
-
-                // 3. Delete the original file
-                fileRepository.delete(originalFile);
-                break;
-
-            case "list":
-                if (recipientUsernames == null || recipientUsernames.isEmpty()) {
-                    throw new IllegalArgumentException("Recipient usernames cannot be empty for 'list' deletion.");
-                }
-
-                // 1. Find shared copies for the specified recipients
-                List<File> filesToDelete = fileRepository.findByOriginalFileIdAndOwnerUsernameIn(originalFile.getId(), recipientUsernames);
-
-                // 2. Delete the recipient's file copies
-                fileRepository.deleteAll(filesToDelete);
-
-                // 3. Delete the original file from the sender's wallet
-                fileRepository.delete(originalFile);
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
-        }
+        // Delete associated SharedFile entries first
+        List<SharedFile> sharedFiles = sharedFileRepository.findByOriginalFileId(fileId);
+        sharedFileRepository.deleteAll(sharedFiles);
+        fileRepository.delete(originalFile);
     }
 
 }
