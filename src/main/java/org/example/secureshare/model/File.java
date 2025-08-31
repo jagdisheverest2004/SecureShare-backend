@@ -37,7 +37,23 @@ public class File {
     @JoinColumn(name = "owner_user_id")
     private User owner;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_file_id")
+    private File originalFile; // This is the new field
+
     // Custom constructor to avoid circular dependency with Lombok's @AllArgsConstructor
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, User owner, File originalFile) {
+        this.encryptedData = encryptedData;
+        this.encryptedAesKey = encryptedAesKey;
+        this.iv = iv;
+        this.filename = filename;
+        this.description = description;
+        this.category = category;
+        this.owner = owner;
+        this.originalFile = originalFile;
+        this.timestamp = LocalDateTime.now();
+    }
+
     public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, User owner) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;

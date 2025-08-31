@@ -49,7 +49,6 @@ public class SharedFileService {
 
         SharedFile log = new SharedFile();
         log.setFile(newFile);
-        log.setOriginalFile(originalFile);
         log.setSender(sender);
         log.setRecipient(recipient);
         log.setFilename(newFile.getFilename());

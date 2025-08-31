@@ -1,6 +1,7 @@
 package org.example.secureshare.service;
 
 import org.example.secureshare.model.AuditLog;
+import org.example.secureshare.model.User;
 import org.example.secureshare.payload.auditDTO.AuditLogsReponse;
 import org.example.secureshare.repository.AuditLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,8 @@ public class AuditLogService {
     private AuditLogRepository auditLogRepository;
 
     @Transactional
-    public void logAction(String username, String action, String filename) {
-        AuditLog log = new AuditLog(username, action, filename);
+    public void logAction(User user , String username, String action, String filename) {
+        AuditLog log = new AuditLog(user,username, action, filename);
         auditLogRepository.save(log);
     }
 

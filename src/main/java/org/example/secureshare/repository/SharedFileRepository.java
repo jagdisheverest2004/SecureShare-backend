@@ -8,7 +8,5 @@ import java.util.List;
 
 @Repository
 public interface SharedFileRepository extends JpaRepository<SharedFile, Long>, JpaSpecificationExecutor<SharedFile> {
-    List<SharedFile> findBySenderUserIdAndOriginalFileId(Long userId, Long id);
-
-    List<SharedFile> findBySenderUserIdAndOriginalFileIdAndRecipientUsernameIn(Long userId, Long id, List<String> recipientUsernames);
+    List<SharedFile> findByOriginalFileId(Long id);
 }

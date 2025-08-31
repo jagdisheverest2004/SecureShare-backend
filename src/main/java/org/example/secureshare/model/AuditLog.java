@@ -1,9 +1,6 @@
 package org.example.secureshare.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,12 +16,17 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id") // Link to the User entity
+    private User user;
+
     private String username;
     private String action; // e.g., "FILE_UPLOAD", "FILE_SHARED"
     private String filename; // Optional, for file-related actions
     private LocalDateTime timestamp;
 
-    public AuditLog(String username, String action, String filename) {
+    public AuditLog(User user ,String username, String action, String filename) {
+        this.user = user;
         this.username = username;
         this.action = action;
         this.filename = filename;

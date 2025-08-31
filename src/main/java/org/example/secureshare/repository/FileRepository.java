@@ -15,6 +15,9 @@ public interface FileRepository extends JpaRepository<File, Long>, JpaSpecificat
 
     List<File> findByOwnerUserId(Long userId);
 
-    // New method to find a file by its owner and filename
-    Optional<File> findByOwnerUsernameAndFilename(String username, String filename);
+    // New method to find all shared copies of a specific original file
+    List<File> findByOriginalFileIdAndOwnerUserIdNot(Long originalFileId, Long ownerId);
+
+    // New method for the "list" deletion type
+    List<File> findByOriginalFileIdAndOwnerUsernameIn(Long originalFileId, List<String> usernames);
 }

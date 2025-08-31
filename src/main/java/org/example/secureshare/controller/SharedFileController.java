@@ -10,6 +10,7 @@ import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.SharedFileService;
 import org.example.secureshare.service.OtpService;
 import org.example.secureshare.repository.UserRepository;
+import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +32,7 @@ public class SharedFileController {
     private SharedFileService sharedFileService;
 
     @Autowired
-    private OtpService otpService;
+    private AuthUtil authUtil;
 
     @Autowired
     private UserRepository userRepository;
@@ -60,7 +61,7 @@ public class SharedFileController {
                     request.getIsSensitive()
             );
 
-            auditLogService.logAction(senderUsername, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
+            auditLogService.logAction(sender,senderUsername, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "File shared successfully!"));
 
         } catch (NoSuchElementException e) {
@@ -84,7 +85,7 @@ public class SharedFileController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedByMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
-        auditLogService.logAction(username, "FETCH_SHARED_FILES_BY_ME", "");
+        auditLogService.logAction(authUtil.getLoggedInUser(),username, "FETCH_SHARED_FILES_BY_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 
@@ -100,7 +101,7 @@ public class SharedFileController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedToMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
-        auditLogService.logAction(username, "FETCH_SHARED_FILES_TO_ME", "");
+        auditLogService.logAction(authUtil.getLoggedInUser(),username, "FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 }

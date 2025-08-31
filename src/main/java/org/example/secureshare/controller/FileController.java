@@ -12,6 +12,7 @@ import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.OtpService;
+import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -40,14 +41,17 @@ public class FileController {
     private OtpService otpService;
 
     @Autowired
+    private AuthUtil authUtil;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private AuditLogService auditLogService;
 
-    @PostMapping("/upload") // Changed the endpoint path
+    @PostMapping("/upload")
     public ResponseEntity<?> uploadFiles(
-            @RequestParam("files") MultipartFile[] files, // Changed from single file to an array
+            @RequestParam("files") MultipartFile[] files,
             @RequestParam("description") String description,
             @RequestParam("category") String category) {
 
@@ -55,15 +59,14 @@ public class FileController {
         String username = authentication.getName();
 
         try {
-            // Call the service method with the array of files
+            User loggedInUser = authUtil.getLoggedInUser();
             List<Long> fileIds = fileService.storeFiles(files, description, category, username);
 
-            // Log each file upload
             for(MultipartFile file : files) {
-                auditLogService.logAction(username, "FILE_UPLOAD", file.getOriginalFilename());
+                // Pass the User object instead of the username
+                auditLogService.logAction(loggedInUser, username,"FILE_UPLOAD", file.getOriginalFilename());
             }
 
-            // Return a response with the list of file IDs
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", files.length + " files uploaded successfully!", "fileIds", fileIds));
 
         } catch (IllegalArgumentException e) {
@@ -86,7 +89,7 @@ public class FileController {
                     .orElseThrow(() -> new NoSuchElementException("File not found.")).getFilename();
 
             // Log the file download action
-            auditLogService.logAction(username, "FILE_DOWNLOAD", originalFilename);
+            auditLogService.logAction(authUtil.getLoggedInUser(),username, "FILE_DOWNLOAD", originalFilename);
 
             // Set headers for file download
             HttpHeaders headers = new HttpHeaders();
@@ -119,7 +122,7 @@ public class FileController {
 
         try {
             FetchFilesResponse files = fileService.getAllFilesForUser(keyword, username, pageNumber, pageSize, sortBy, sortOrder);
-            auditLogService.logAction(username, "FETCH_ALL_FILES", "");
+            auditLogService.logAction(authUtil.getLoggedInUser(),username, "FETCH_ALL_FILES", "");
             return ResponseEntity.ok(files);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -128,7 +131,8 @@ public class FileController {
         }
     }
 
-    @DeleteMapping("/delete/{fileId}")
+    // Change to POST with a request body
+    @PostMapping("/delete/{fileId}")
     public ResponseEntity<?> deleteFile(
             @PathVariable Long fileId,
             @RequestBody DeleteFileRequest request) {
@@ -138,7 +142,7 @@ public class FileController {
 
         try {
             fileService.deleteFile(fileId, username, request.getDeletionType(), request.getRecipientUsernames());
-            auditLogService.logAction(username, "FILE_DELETED", "File ID: " + fileId + " (" + request.getDeletionType() + ")");
+            auditLogService.logAction(authUtil.getLoggedInUser(), username ,"FILE_DELETE", "File ID: " + fileId);
             return ResponseEntity.ok(Map.of("message", "File deletion processed successfully."));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));

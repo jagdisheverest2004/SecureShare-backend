@@ -45,15 +45,25 @@ public class User {
     private Role role;
 
     @Lob
-    @Column(name = "public_key")
+    @Column(name = "public_key" , columnDefinition = "LONGTEXT")
     private String publicKey;
 
     @Lob
-    @Column(name = "private_key")
+    @Column(name = "private_key" , columnDefinition = "LONGTEXT")
     private String privateKey;
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<File> files = new HashSet<>();
+
+    // Assuming similar relationships for shared files and logs
+    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<SharedFile> sentFiles = new HashSet<>();
+
+    @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<SharedFile> receivedFiles = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<AuditLog> auditLogs = new HashSet<>();
 
     public User(String username, String email, String password) {
         this.username = username;

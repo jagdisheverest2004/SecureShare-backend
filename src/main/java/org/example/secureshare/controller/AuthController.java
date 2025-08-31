@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.KeyService;
 import org.example.secureshare.service.OtpService;
+import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -52,6 +53,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuthUtil authUtil;
 
     @Autowired
     private RoleRepository roleRepository;
@@ -97,7 +101,7 @@ public class AuthController {
 
         user.setRole(userRole);
         userRepository.save(user);
-        auditLogService.logAction(user.getUsername(), "USER_REGISTERED", "");
+        auditLogService.logAction(user,user.getUsername(), "USER_REGISTERED", "");
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
@@ -147,7 +151,7 @@ public class AuthController {
                         jwtCookie.toString()
                 );
 
-                auditLogService.logAction(username, "USER_SIGNED_IN" , "");
+                auditLogService.logAction(user,username, "USER_SIGNED_IN" , "");
                 return ResponseEntity.ok()
                         .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                         .body(userInfoResponse);
@@ -160,11 +164,14 @@ public class AuthController {
 
     @PostMapping("/signout")
     public ResponseEntity<?> logoutUser() {
+
+        User user = authUtil.getLoggedInUser();
+
         ResponseCookie cookie = jwtUtils.generateNoTokenFromCookie();
         Map<String, Object> response = new HashMap<>();
         response.put("message", "User signed out successfully!");
         response.put("status", true);
-        auditLogService.logAction(SecurityContextHolder.getContext().getAuthentication().getName(), "USER_SIGN_OUT", "");
+        auditLogService.logAction(user, user.getUsername(), "USER_SIGN_OUT", "");
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
     }
 }
