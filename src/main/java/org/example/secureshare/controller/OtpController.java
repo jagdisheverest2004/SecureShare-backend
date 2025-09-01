@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
-@RequestMapping("/api/otp")
+@RequestMapping("/api/auth/otp")
 public class OtpController {
 
     @Autowired

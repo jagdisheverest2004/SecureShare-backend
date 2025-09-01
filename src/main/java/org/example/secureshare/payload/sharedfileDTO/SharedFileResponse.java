@@ -13,6 +13,6 @@ public class SharedFileResponse {
     private String recipientName;
     private String filename;
     private String category;
-    private String isSensitive;
+    private Boolean isSensitive;
     private LocalDateTime sharedAt;
 }

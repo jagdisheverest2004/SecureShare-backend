@@ -95,8 +95,9 @@ public class SharedFileService {
                         log.getRecipient().getUsername(),
                         log.getFilename(),
                         log.getCategory(),
-                        log.getIsSensitive(),
+                        Boolean.valueOf(log.getIsSensitive()),
                         log.getSharedAt()
+
                 ))
                 .toList();
         response.setSharedFiles(sharedFileResponse);
@@ -142,7 +143,7 @@ public class SharedFileService {
                         log.getRecipient().getUsername(),
                         log.getFilename(),
                         log.getCategory(),
-                        log.getIsSensitive(),
+                        Boolean.valueOf(log.getIsSensitive()),
                         log.getSharedAt()
                 ))
                 .toList();

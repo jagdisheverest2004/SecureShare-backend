@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
-@RequestMapping("/api/user-utils")
+@RequestMapping("/api/auth/user-utils")
 public class UserController {
 
     @Autowired

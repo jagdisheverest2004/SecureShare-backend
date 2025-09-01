@@ -36,7 +36,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/auth/authenticate")
 public class AuthController {
 
     @Autowired

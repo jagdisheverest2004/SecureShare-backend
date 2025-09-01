@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/api/auth/files")
 public class FileController {
 
     @Autowired
@@ -142,6 +142,7 @@ public class FileController {
         String username = authentication.getName();
 
         try {
+            System.out.println("Received delete request for file ID: " + fileId + " with deletion type: " + deleteFileRequest.getDeletionType());
             fileService.deleteFile(fileId, username , deleteFileRequest.getDeletionType(),deleteFileRequest.getRecipientUsernames());
             auditLogService.logAction(authUtil.getLoggedInUser(), "FILE_DELETE", "File ID: " + fileId);
             return ResponseEntity.ok(Map.of("message", "File deletion processed successfully."));

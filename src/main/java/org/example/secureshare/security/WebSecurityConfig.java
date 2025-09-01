@@ -60,13 +60,16 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/api/auth/**").permitAll()
-                                .requestMatchers("/api/otp/**").permitAll()
-                                .requestMatchers("/api/user-utils/initiate").permitAll()
-                                .requestMatchers("/api/user-utils/reset").permitAll()
-                                .requestMatchers("/api/user-utils/find-username").permitAll()
-                                .requestMatchers("/api/files/user-utils/delete-account").authenticated()
-                                .requestMatchers("/h2-console/**").permitAll()
+                                .requestMatchers("/api/auth/authenticate/signup").permitAll()
+                                .requestMatchers("/api/auth/authenticate/signin").permitAll()
+                                .requestMatchers("/api/auth/authenticate/verify-otp").permitAll()
+                                .requestMatchers("/api/auth/authenticate/signout").authenticated()
+                                .requestMatchers("/api/auth/otp/").permitAll()
+                                .requestMatchers("/api/auth/user-utils/initiate").permitAll()
+                                .requestMatchers("/api/auth/user-utils/reset").permitAll()
+                                .requestMatchers("/api/auth/user-utils/find-username").permitAll()
+                                .requestMatchers("/api/auth/user-utils/delete-account").authenticated()
+                                .requestMatchers("/h2-console/").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
@@ -80,8 +83,8 @@ public class WebSecurityConfig {
         return (web) -> web.ignoring().requestMatchers("/v2/api-docs",
                 "/configuration/ui",
                 "/configuration/security",
-                "/swagger-resources/**",
+                "/swagger-resources/",
                 "/swagger-ui.html",
-                "/webjars/**");
+                "/webjars/");
     }
 }

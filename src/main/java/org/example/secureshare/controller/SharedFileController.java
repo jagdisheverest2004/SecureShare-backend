@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
-@RequestMapping("/api/shared-files")
+@RequestMapping("/api/auth/shared-files")
 public class SharedFileController {
 
     @Autowired
@@ -56,7 +56,7 @@ public class SharedFileController {
                     sharedFileId,
                     sender.getUserId(),
                     recipient.getUserId(),
-                    request.getIsSensitive()
+                    String.valueOf(request.getIsSensitive())
             );
 
             auditLogService.logAction(sender, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());

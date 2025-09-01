@@ -226,6 +226,7 @@ public class FileService {
         File originalFile = fileRepository.findById(fileId)
                 .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
 
+        System.out.println("Attempting to delete file ID: " + fileId + " by user: " + username + " with deletion type: " + deletionType);
         if (!originalFile.getOwner().getUserId().equals(owner.getUserId())) {
             throw new SecurityException("User is not authorized to delete this file.");
         }
@@ -233,18 +234,22 @@ public class FileService {
         switch (deletionType) {
             case "me":
                 // Delete only the original file from the sender's account.
+                System.out.println("Deleting file ID: " + fileId + " by user: " + username + " with deletion type: 'me'");
                 fileRepository.delete(originalFile);
+                System.out.println("File ID: " + fileId + " deleted successfully for user: " + username);
                 break;
 
             case "everyone":
                 // 1. Find all shared copies (recipient's files) and their logs
+                System.out.println("Deleting file ID: " + fileId + " by user: " + username + " with deletion type: 'everyone'");
                 List<SharedFile> allSharedFileLogs = sharedFileRepository.findByOriginalFile_Id(originalFile.getId());
-
+                System.out.println("Found " + allSharedFileLogs + " shared copies for file ID: " + fileId);
                 // 2. Collect the file IDs of the recipient's copies
+                System.out.println("Collecting file IDs of the recipient's copies");
                 List<Long> recipientFileIds = allSharedFileLogs.stream()
                         .map(log -> log.getFile().getId())
                         .toList();
-
+                System.out.println("Recipient file IDs to delete: " + recipientFileIds);
                 // 3. Delete the shared file logs FIRST
                 sharedFileRepository.deleteAll(allSharedFileLogs);
 
