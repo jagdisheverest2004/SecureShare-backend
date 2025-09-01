@@ -252,12 +252,14 @@ public class FileService {
                 System.out.println("Recipient file IDs to delete: " + recipientFileIds);
                 // 3. Delete the shared file logs FIRST
                 sharedFileRepository.deleteAll(allSharedFileLogs);
-
+                System.out.println("Deleted shared file logs for file ID: " + fileId);
                 // 4. Then, delete all the recipient's file copies
                 fileRepository.deleteAllById(recipientFileIds);
+                System.out.println("Deleted recipient file copies for file ID: " + fileId);
 
                 // 5. Finally, delete the original file from the sender's wallet
                 fileRepository.delete(originalFile);
+                System.out.println("Deleted original file ID: " + fileId + " for user: " + username);
                 break;
 
             case "list":
@@ -267,21 +269,27 @@ public class FileService {
 
                 // 1. Find the shared file logs for the specified recipients
                 List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findByOriginalFile_IdAndRecipient_UsernameIn(originalFile.getId(), recipientUsernames);
+                if (sharedFileLogsForRecipients.isEmpty()) {
+                    throw new NoSuchElementException("No shared file logs found for the specified recipients.");
+                }
+                System.out.println("Found " + sharedFileLogsForRecipients.size() + " shared copies for file ID: " + fileId + " for the specified recipients: " + recipientUsernames);
 
                 // 2. Collect the file IDs of the recipient's copies
                 List<Long> recipientFilesToDeleteIds = sharedFileLogsForRecipients.stream()
                         .map(log -> log.getFile().getId())
                         .toList();
+                System.out.println("Recipient file IDs to delete: " + recipientFilesToDeleteIds);
 
                 // 3. Delete the shared file logs FIRST
                 sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
+                System.out.println("Deleted shared file logs for specified recipients for file ID: " + fileId);
 
                 // 4. Then, delete the file records from the specified recipients' wallets
                 fileRepository.deleteAllById(recipientFilesToDeleteIds);
-
+                System.out.println("Deleted recipient file copies for specified recipients for file ID: " + fileId);
                 // 5. Delete the original file from the sender's wallet
                 fileRepository.delete(originalFile);
-
+                System.out.println("Deleted original file ID: " + fileId + " for user: " + username);
                 break;
             default:
                 throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
