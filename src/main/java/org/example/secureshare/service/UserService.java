@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.example.secureshare.model.AuditLog;
 import org.example.secureshare.model.File;
 import org.example.secureshare.model.User;
+import org.example.secureshare.payload.userutilsDTO.SettingsDTO;
 import org.example.secureshare.repository.AuditLogRepository;
 import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.UserRepository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -88,5 +90,18 @@ public class UserService {
         auditLogRepository.deleteAll(auditLogList);
 
         userRepository.delete(user);
+    }
+
+    public SettingsDTO getUserSettings(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
+
+
+        SettingsDTO settings = new SettingsDTO();
+        settings.setUsername(user.getUsername());
+        settings.setEmail(user.getEmail());
+
+        return settings;
+
     }
 }

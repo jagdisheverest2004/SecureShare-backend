@@ -52,7 +52,6 @@ public class FileController {
     }
 
     // Inside the downloadFileById method
-
     @GetMapping("/download/{fileId}")
     public ResponseEntity<?> downloadFileById(@PathVariable("fileId") Long fileId) {
 

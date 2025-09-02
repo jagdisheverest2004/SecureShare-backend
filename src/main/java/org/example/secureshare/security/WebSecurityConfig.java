@@ -73,6 +73,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/auth/user-utils/initiate").permitAll()
                                 .requestMatchers("/api/auth/user-utils/reset").permitAll()
                                 .requestMatchers("/api/auth/user-utils/find-username").permitAll()
+                                .requestMatchers("/api/auth/user-utils/settings").authenticated()
                                 .requestMatchers("/api/auth/user-utils/delete-account").authenticated()
                                 .requestMatchers("/h2-console/").permitAll()
                                 .anyRequest().authenticated()

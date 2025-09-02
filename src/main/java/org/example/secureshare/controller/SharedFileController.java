@@ -1,9 +1,11 @@
 package org.example.secureshare.controller;
 
 import org.example.secureshare.config.AppConstants;
+import org.example.secureshare.model.File;
 import org.example.secureshare.model.User;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.payload.sharedfileDTO.SharedFilesResponse;
+import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.SharedFileService;
@@ -31,6 +33,9 @@ public class SharedFileController {
     private UserRepository userRepository;
 
     @Autowired
+    private FileRepository fileRepository;
+
+    @Autowired
     private AuditLogService auditLogService;
 
     @PostMapping("/share")
@@ -39,6 +44,12 @@ public class SharedFileController {
 
             User recipient = userRepository.findByUsername(request.getRecipientUsername())
                     .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + request.getRecipientUsername()));
+
+            //Check whether the file sharing user is the owner of the file
+            Boolean exist  = fileRepository.existbyOriginalFileIdAndFileId(request.getFileId());
+            if(!exist) {
+                throw new SecurityException("You do not have permission to share this file.");
+            }
 
             Long sharedFileId = fileService.shareFile(request.getFileId(), recipient);
 
