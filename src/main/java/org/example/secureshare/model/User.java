@@ -55,21 +55,6 @@ public class User {
     @JsonIgnore // <-- Added JsonIgnore
     private String privateKey;
 
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<File> files = new HashSet<>();
-
-    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<SharedFile> sentFiles = new HashSet<>();
-
-    @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<SharedFile> receivedFiles = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<AuditLog> auditLogs = new HashSet<>();
 
     public User(String username, String email, String password) {
         this.username = username;

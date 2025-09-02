@@ -17,25 +17,17 @@ public class SharedFile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "file_id")
-    @JsonIgnore
-    private File file;
+    @Column(name = "new_file_id")
+    private Long newFileId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "original_file_id")
-    @JsonIgnore
-    private File originalFile;
+    @Column(name = "original_file_id")
+    private Long originalFileId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id")
-    @JsonIgnore
-    private User sender;
+    @Column(name = "sender_id")
+    private Long senderId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_id")
-    @JsonIgnore
-    private User recipient;
+    @Column(name = "recipient_id")
+    private Long recipientId;
 
     private String filename;
     private String category;

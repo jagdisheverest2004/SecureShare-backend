@@ -41,25 +41,21 @@ public class SharedFileController {
     @PostMapping("/share")
     public ResponseEntity<?> shareFile(@RequestBody ShareFileRequest request) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String senderUsername = authentication.getName();
-            User sender = userRepository.findByUsername(senderUsername)
-                    .orElseThrow(() -> new NoSuchElementException("Sender user not found: " + senderUsername));
+
             User recipient = userRepository.findByUsername(request.getRecipientUsername())
                     .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + request.getRecipientUsername()));
 
-            Long sharedFileId = fileService.shareFile(request.getFileId(), senderUsername, request.getRecipientUsername());
+            Long sharedFileId = fileService.shareFile(request.getFileId(), recipient);
 
             // Log the sharing transaction
             sharedFileService.logFileShare(
                     request.getFileId(),
                     sharedFileId,
-                    sender.getUserId(),
                     recipient.getUserId(),
                     String.valueOf(request.getIsSensitive())
             );
 
-            auditLogService.logAction(sender, "FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
+            auditLogService.logAction("FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "File shared successfully!"));
 
         } catch (NoSuchElementException e) {
@@ -80,10 +76,8 @@ public class SharedFileController {
             @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_SHARED_FILES_BY,required = false) String sortBy,
             @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_SHARED_FILES_DIR,required = false) String sortOrder
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedByMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
-        auditLogService.logAction(authUtil.getLoggedInUser(), "FETCH_SHARED_FILES_BY_ME", "");
+        SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedByMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive);
+        auditLogService.logAction("FETCH_SHARED_FILES_BY_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 
@@ -96,10 +90,8 @@ public class SharedFileController {
             @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_SHARED_FILES_BY,required = false) String sortBy,
             @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_SHARED_FILES_DIR,required = false) String sortOrder
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedToMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive, username);
-        auditLogService.logAction(authUtil.getLoggedInUser(), "FETCH_SHARED_FILES_TO_ME", "");
+        SharedFilesResponse sharedFiles = sharedFileService.getFilesSharedToMe(pageNumber,pageSize,sortBy,sortOrder,keyword,sensitive);
+        auditLogService.logAction("FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
 }
