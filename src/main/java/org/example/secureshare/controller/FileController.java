@@ -1,22 +1,15 @@
 package org.example.secureshare.controller;
 
 import org.example.secureshare.config.AppConstants;
-import org.example.secureshare.model.User;
 import org.example.secureshare.payload.fiteDTO.DeleteFileRequest;
 import org.example.secureshare.payload.fiteDTO.FetchFilesResponse;
-import org.example.secureshare.repository.FileRepository;
-import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.service.AuditLogService;
 import org.example.secureshare.service.FileService;
-import org.example.secureshare.service.OtpService;
-import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -111,7 +104,6 @@ public class FileController {
         }
     }
 
-    // Change to POST with a request body
     @DeleteMapping("/delete/{fileId}")
     public ResponseEntity<?> deleteFile(
             @PathVariable Long fileId,

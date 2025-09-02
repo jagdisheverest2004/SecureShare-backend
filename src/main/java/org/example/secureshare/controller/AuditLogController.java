@@ -3,7 +3,6 @@ package org.example.secureshare.controller;
 import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.payload.auditDTO.AuditLogsResponse;
 import org.example.secureshare.service.AuditLogService;
-import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

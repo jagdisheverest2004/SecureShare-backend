@@ -5,7 +5,6 @@ import org.example.secureshare.payload.otpDTO.OtpRequest;
 import org.example.secureshare.payload.otpDTO.OtpVerificationRequest;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.service.OtpService;
-import org.example.secureshare.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
