@@ -89,11 +89,14 @@ public class AuthController {
         try {
             KeyPair keyPair = keyService.generateRsaKeyPair();
             user.setPublicKey(keyService.encodePublicKey(keyPair.getPublic()));
-            user.setPrivateKey(keyService.encodePrivateKey(keyPair.getPrivate()));
+            String encryptedPrivateKey = keyService.encryptPrivateKey(keyPair.getPrivate());
+            user.setPrivateKey(encryptedPrivateKey);
         } catch (NoSuchAlgorithmException e) {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Error: Key generation failed."));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
         Role userRole = roleRepository.findByRoleName(AppRole.ROLE_USER)
