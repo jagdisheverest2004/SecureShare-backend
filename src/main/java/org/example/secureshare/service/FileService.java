@@ -58,8 +58,6 @@ public class FileService {
         return uploadedFileIds;
     }
 
-    // Inside the storeSingleFile method
-
     @Transactional
     public Long storeSingleFile(MultipartFile file, String description, String category, String username) throws IOException {
         try {
@@ -108,7 +106,8 @@ public class FileService {
                 throw new SecurityException("User is not authorized to access this file.");
             }
 
-            PrivateKey ownerPrivateKey = keyService.decodePrivateKey(loggedInUser.getPrivateKey());
+            // Decrypt the user's private key with the master key before using it.
+            PrivateKey ownerPrivateKey = keyService.decryptPrivateKey(loggedInUser.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, ownerPrivateKey);
             SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
@@ -181,7 +180,8 @@ public class FileService {
                 throw new SecurityException("User is not authorized to share this file.");
             }
 
-            PrivateKey senderPrivateKey = keyService.decodePrivateKey(sender.getPrivateKey());
+            // Decrypt the sender's private key with the master key before using it.
+            PrivateKey senderPrivateKey = keyService.decryptPrivateKey(sender.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFile.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, senderPrivateKey);
             SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
@@ -197,9 +197,9 @@ public class FileService {
                     originalFile.getFilename(),
                     originalFile.getDescription(),
                     originalFile.getCategory(),
-                    originalFile.getContentType(), // Pass contentType
+                    originalFile.getContentType(),
                     recipient,
-                    originalFile // Set the original file reference here
+                    originalFile
             );
             File savedFile = fileRepository.save(sharedFile);
 
