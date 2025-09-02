@@ -108,12 +108,8 @@ public class FileController {
             @PathVariable Long fileId,
             @RequestBody DeleteFileRequest deleteFileRequest
     ) {
-
-
         try {
-            System.out.println("Received delete request for file ID: " + fileId + " with deletion type: " + deleteFileRequest.getDeletionType());
             fileService.deleteFile(fileId , deleteFileRequest.getDeletionType(),deleteFileRequest.getRecipientUsernames());
-            System.out.println("File deletion processed successfully for file ID: " + fileId);
             auditLogService.logAction("FILE_DELETE", "File ID: " + fileId);
             return ResponseEntity.ok(Map.of("message", "File deletion processed successfully."));
         } catch (NoSuchElementException e) {

@@ -223,61 +223,73 @@ public class FileService {
             throw new SecurityException("User is not authorized to delete this file.");
         }
 
-        switch (deletionType) {
-            case "me":
-                // Delete only the original file from the sender's account.
-                fileRepository.delete(originalFile);
-                break;
+        if(fileRepository.existbyOriginalFileIdAndFileId(fileId)) {
 
-            case "everyone":
-                // 1. Find all shared copies (recipient's files) and their logs
-                List<SharedFile> allSharedFileLogs = sharedFileRepository.findSharedFilesByFileId(fileId);
-                // 2. Collect the file IDs of the recipient's copies
-                List<Long> recipientFileIds = allSharedFileLogs.stream()
-                        .map(SharedFile::getNewFileId)
-                        .toList();
-                // 3. Delete the shared file logs FIRST
-                sharedFileRepository.deleteAll(allSharedFileLogs);
-                // 4. Then, delete all the recipient's file copies
-                fileRepository.deleteAllById(recipientFileIds);
-                // 5. Finally, delete the original file from the sender's wallet
-                fileRepository.delete(originalFile);
-                break;
+            switch (deletionType) {
+                case "me":
+                    // Delete only the original file from the sender's account.
+                    fileRepository.delete(originalFile);
+                    break;
 
-            case "list":
-                if (recipientUsernames == null || recipientUsernames.isEmpty()) {
-                    throw new IllegalArgumentException("Recipient usernames cannot be empty for 'list' deletion.");
-                }
+                case "everyone":
+                    // 1. Find all shared copies (recipient's files) and their logs
+                    List<SharedFile> allSharedFileLogs = sharedFileRepository.findSharedFilesByFileId(fileId);
+                    // 2. Collect the file IDs of the recipient's copies
+                    List<Long> recipientFileIds = allSharedFileLogs.stream()
+                            .map(SharedFile::getNewFileId)
+                            .toList();
+                    // 3. Delete the shared file logs FIRST
+                    sharedFileRepository.deleteAll(allSharedFileLogs);
+                    // 4. Then, delete all the recipient's file copies
+                    fileRepository.deleteAllById(recipientFileIds);
+                    // 5. Finally, delete the original file from the sender's wallet
+                    fileRepository.delete(originalFile);
+                    break;
 
-                List<Long> recipientIds = new ArrayList<>();
-                for (String username : recipientUsernames) {
-                    User user = userRepository.findByUsername(username)
-                            .orElseThrow(() -> new NoSuchElementException("Recipient user not found: " + username));
-                    recipientIds.add(user.getUserId());
-                }
+                case "list":
+                    if (recipientUsernames == null || recipientUsernames.isEmpty()) {
+                        throw new IllegalArgumentException("Recipient usernames cannot be empty for 'list' deletion.");
+                    }
 
-                // 1. Find the shared file logs for the specified recipients
-                List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findSharedFilesByFileIdAndRecipientId(fileId, recipientIds);
-                if (sharedFileLogsForRecipients.isEmpty()) {
-                    throw new NoSuchElementException("No shared file logs found for the specified recipients.");
-                }
+                    List<Long> recipientIds = new ArrayList<>();
+                    for (String username : recipientUsernames) {
+                        User user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new NoSuchElementException("Recipient user not found: " + username));
+                        recipientIds.add(user.getUserId());
+                    }
 
-                // 2. Collect the file IDs of the recipient's copies
-                List<Long> recipientFilesToDeleteIds = sharedFileLogsForRecipients.stream()
-                        .map(SharedFile::getNewFileId)
-                        .toList();
+                    // 1. Find the shared file logs for the specified recipients
+                    List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findSharedFilesByFileIdAndRecipientId(fileId, recipientIds);
+                    if (sharedFileLogsForRecipients.isEmpty()) {
+                        throw new NoSuchElementException("No shared file logs found for the specified recipients.");
+                    }
 
-                // 3. Delete the shared file logs FIRST
-                sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
+                    // 2. Collect the file IDs of the recipient's copies
+                    List<Long> recipientFilesToDeleteIds = sharedFileLogsForRecipients.stream()
+                            .map(SharedFile::getNewFileId)
+                            .toList();
 
-                // 4. Then, delete the file records from the specified recipients' wallets
-                fileRepository.deleteAllById(recipientFilesToDeleteIds);
+                    // 3. Delete the shared file logs FIRST
+                    sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
 
-                // 5. Delete the original file from the sender's wallet
-                fileRepository.delete(originalFile);
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
+                    // 4. Then, delete the file records from the specified recipients' wallets
+                    fileRepository.deleteAllById(recipientFilesToDeleteIds);
+
+                    // 5. Delete the original file from the sender's wallet
+                    fileRepository.delete(originalFile);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
+            }
+        }
+        else{
+            if (!"me".equals(deletionType)) {
+                // A recipient should only be able to delete their own copy
+                throw new IllegalArgumentException("Deletion type must be 'me' for a shared file copy.");
+            }
+
+            fileRepository.delete(originalFile);
+            sharedFileRepository.deleteByNewFileId(fileId);
         }
     }
 }
