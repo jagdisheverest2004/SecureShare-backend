@@ -8,6 +8,7 @@ import org.example.secureshare.payload.sharedfileDTO.SharedFilesResponse;
 import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.SharedFileRepository;
 import org.example.secureshare.repository.UserRepository;
+import org.example.secureshare.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,27 +32,23 @@ public class SharedFileService {
     private UserRepository userRepository;
 
     @Autowired
+    private AuthUtil authUtil;
+
+
+    @Autowired
     private FileRepository fileRepository;
 
     @Transactional
-    public void logFileShare(Long oldFileId, Long newFileId, Long senderId, Long recipientId, String isSensitive) {
+    public void logFileShare(Long oldFileId, Long newFileId, Long recipientId, String isSensitive) {
+        User owner = authUtil.getLoggedInUser();
         File newFile = fileRepository.findById(newFileId)
                 .orElseThrow(() -> new NoSuchElementException("File not found: " + newFileId));
 
-        File originalFile = fileRepository.findById(oldFileId)
-                .orElseThrow(() -> new NoSuchElementException("File not found: " + oldFileId));
-
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new NoSuchElementException("Sender not found: " + senderId));
-
-        User recipient = userRepository.findById(recipientId)
-                .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + recipientId));
-
         SharedFile log = new SharedFile();
-        log.setFile(newFile);
-        log.setOriginalFile(originalFile);
-        log.setSender(sender);
-        log.setRecipient(recipient);
+        log.setNewFileId(newFileId);
+        log.setOriginalFileId(oldFileId);
+        log.setSenderId(owner.getUserId());
+        log.setRecipientId(recipientId);
         log.setFilename(newFile.getFilename());
         log.setCategory(newFile.getCategory());
         log.setIsSensitive(isSensitive);
@@ -61,12 +58,9 @@ public class SharedFileService {
     }
 
     @Transactional(readOnly = true)
-    public SharedFilesResponse getFilesSharedByMe(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder, String keyword, String sensitive, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
-
-        // The base specification is a crucial filter for the logged-in user's ID.
-        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("sender").get("userId"), user.getUserId());
+    public SharedFilesResponse getFilesSharedByMe(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder, String keyword, String sensitive) {
+        User owner = authUtil.getLoggedInUser();
+        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("senderId"), owner.getUserId());
         Pageable pageable = getPageable(pageNumber, pageSize, sortBy, sortOrder);
 
         if (sensitive != null) {
@@ -76,12 +70,16 @@ public class SharedFileService {
         if (keyword != null && !keyword.isEmpty()) {
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
-            // Use a sub-specification with `OR` conditions for the keyword search.
+            User recipient = userRepository.findByUsername(keyword).orElse(null);
+
             Specification<SharedFile> keywordSpec = (root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("filename")), likeKeyword),
-                    cb.like(cb.lower(root.get("category")), likeKeyword),
-                    cb.like(cb.lower(root.get("recipient").get("username")), likeKeyword)
-            );
+                    cb.like(cb.lower(root.get("filename")), likeKeyword));
+            keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("category")), likeKeyword));
+            if(recipient != null) {
+                Long recipientId = recipient.getUserId();
+                keywordSpec = keywordSpec.or((root, query, cb) -> cb.equal(root.get("recipientId"), recipientId));
+            }
+
             spec = spec.and(keywordSpec);
         }
 
@@ -90,15 +88,25 @@ public class SharedFileService {
 
         SharedFilesResponse response = new SharedFilesResponse();
         List<SharedFileResponse> sharedFileResponse = logs.stream()
-                .map(log -> new SharedFileResponse(
-                        log.getSender().getUsername(),
-                        log.getRecipient().getUsername(),
-                        log.getFilename(),
-                        log.getCategory(),
-                        Boolean.valueOf(log.getIsSensitive()),
-                        log.getSharedAt()
+                .map(log ->
+                {
+                   User sender = userRepository.findById(log.getSenderId())
+                           .orElseThrow(() -> new NoSuchElementException("Sender not found with ID: " + log.getSenderId()));
 
-                ))
+                   User recipient = userRepository.findById(log.getRecipientId())
+                           .orElseThrow(() -> new NoSuchElementException("Recipient not found with ID: " + log.getRecipientId()));
+
+                    SharedFileResponse sharedFileResponse1 =  new SharedFileResponse(
+                            sender.getUsername(),
+                            recipient.getUsername(),
+                            log.getFilename(),
+                            log.getCategory(),
+                            Boolean.valueOf(log.getIsSensitive()),
+                            log.getSharedAt()
+
+                    );
+                     return sharedFileResponse1;
+                })
                 .toList();
         response.setSharedFiles(sharedFileResponse);
         response.setPageNumber(logs.getNumber() + 1); // Pages are 0
@@ -110,13 +118,11 @@ public class SharedFileService {
     }
 
     @Transactional(readOnly = true)
-    public SharedFilesResponse getFilesSharedToMe(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder, String keyword, String sensitive, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
+    public SharedFilesResponse getFilesSharedToMe(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder, String keyword, String sensitive) {
+        User owner = authUtil.getLoggedInUser();
         Pageable pageable = getPageable(pageNumber, pageSize, sortBy, sortOrder);
 
-        // The base specification filters for the authenticated user as the recipient.
-        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("recipient").get("userId"), user.getUserId());
+        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("recipientId"), owner.getUserId());
 
         if (sensitive != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("isSensitive"), sensitive));
@@ -125,12 +131,16 @@ public class SharedFileService {
         if (keyword != null && !keyword.isEmpty()) {
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
-            // Use a sub-specification with `OR` conditions for the keyword search.
+            User sender = userRepository.findByUsername(keyword).orElse(null);
+
             Specification<SharedFile> keywordSpec = (root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("filename")), likeKeyword),
-                    cb.like(cb.lower(root.get("category")), likeKeyword),
-                    cb.like(cb.lower(root.get("sender").get("username")), likeKeyword)
-            );
+                    cb.like(cb.lower(root.get("filename")), likeKeyword));
+            keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("category")), likeKeyword));
+            if(sender != null) {
+                Long senderId = sender.getUserId();
+                keywordSpec = keywordSpec.or((root, query, cb) -> cb.equal(root.get("recipientId"), senderId));
+            }
+
             spec = spec.and(keywordSpec);
         }
 
@@ -138,14 +148,25 @@ public class SharedFileService {
 
         SharedFilesResponse response = new SharedFilesResponse();
         List<SharedFileResponse> sharedFileResponse = logs.stream()
-                .map(log -> new SharedFileResponse(
-                        log.getSender().getUsername(),
-                        log.getRecipient().getUsername(),
-                        log.getFilename(),
-                        log.getCategory(),
-                        Boolean.valueOf(log.getIsSensitive()),
-                        log.getSharedAt()
-                ))
+                .map(log ->
+                {
+                    User sender = userRepository.findById(log.getSenderId())
+                            .orElseThrow(() -> new NoSuchElementException("Sender not found with ID: " + log.getSenderId()));
+
+                    User recipient = userRepository.findById(log.getRecipientId())
+                            .orElseThrow(() -> new NoSuchElementException("Recipient not found with ID: " + log.getRecipientId()));
+
+                    SharedFileResponse sharedFileResponse1 =  new SharedFileResponse(
+                            sender.getUsername(),
+                            recipient.getUsername(),
+                            log.getFilename(),
+                            log.getCategory(),
+                            Boolean.valueOf(log.getIsSensitive()),
+                            log.getSharedAt()
+
+                    );
+                    return sharedFileResponse1;
+                })
                 .toList();
         response.setSharedFiles(sharedFileResponse);
         response.setPageNumber(logs.getNumber() + 1); // Pages are 0

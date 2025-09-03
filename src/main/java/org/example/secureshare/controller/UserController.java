@@ -4,6 +4,7 @@ import org.example.secureshare.payload.userutilsDTO.FindUserNameRequest;
 import org.example.secureshare.payload.userutilsDTO.ForgotPasswordRequest;
 import org.example.secureshare.payload.MessageResponse;
 import org.example.secureshare.payload.userutilsDTO.ResetPasswordRequest;
+import org.example.secureshare.payload.userutilsDTO.SettingsDTO;
 import org.example.secureshare.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,6 +84,20 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to delete account."));
+        }
+    }
+
+    @GetMapping("/settings")
+    public ResponseEntity<?> getUserSettings() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            SettingsDTO settings = userService.getUserSettings(username);
+            return ResponseEntity.ok(settings);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to retrieve user settings."));
         }
     }
 

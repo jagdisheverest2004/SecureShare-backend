@@ -6,8 +6,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import java.util.HashSet;
-import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -32,7 +30,7 @@ public class User {
     @NotBlank(message = "Password should not be Blank")
     @Size(max = 120, message = "Password must contain at most 120 characters")
     @Column(nullable = false, name = "password")
-    @JsonIgnore // <-- Added JsonIgnore
+    @JsonIgnore
     private String password;
 
     @NotBlank(message = "Email should not be Blank")
@@ -47,34 +45,18 @@ public class User {
 
     @Lob
     @Column(name = "public_key" , columnDefinition = "LONGTEXT")
-    @JsonIgnore // <-- Added JsonIgnore
+    @JsonIgnore
     private String publicKey;
 
     @Lob
     @Column(name = "private_key" , columnDefinition = "LONGTEXT")
-    @JsonIgnore // <-- Added JsonIgnore
+    @JsonIgnore
     private String privateKey;
 
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<File> files = new HashSet<>();
-
-    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<SharedFile> sentFiles = new HashSet<>();
-
-    @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<SharedFile> receivedFiles = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<AuditLog> auditLogs = new HashSet<>();
 
     public User(String username, String email, String password) {
         this.username = username;
         this.password = password;
         this.email = email;
-        // The collections are initialized by Lombok's @Data annotation so no need to explicitly initialize here.
     }
 }

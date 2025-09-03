@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -74,6 +73,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/auth/user-utils/initiate").permitAll()
                                 .requestMatchers("/api/auth/user-utils/reset").permitAll()
                                 .requestMatchers("/api/auth/user-utils/find-username").permitAll()
+                                .requestMatchers("/api/auth/user-utils/settings").authenticated()
                                 .requestMatchers("/api/auth/user-utils/delete-account").authenticated()
                                 .requestMatchers("/h2-console/").permitAll()
                                 .anyRequest().authenticated()

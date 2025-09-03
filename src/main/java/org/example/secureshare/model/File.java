@@ -1,7 +1,6 @@
 package org.example.secureshare.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
@@ -33,15 +32,13 @@ public class File {
     private String contentType; // New field to store the MIME type
     private LocalDateTime timestamp;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_user_id")
-    private User owner;
+    @Column(name = "owner_id")
+    private Long ownerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "original_file_id")
-    private File originalFile;
+    @Column(name = "original_file_id")
+    private Long originalFileId;
 
-    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, User owner) {
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, Long ownerId) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
         this.iv = iv;
@@ -49,11 +46,11 @@ public class File {
         this.description = description;
         this.category = category;
         this.contentType = contentType;
-        this.owner = owner;
+        this.ownerId = ownerId;
         this.timestamp = LocalDateTime.now();
     }
 
-    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, User owner, File originalFile) {
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, Long owner, Long originalFile) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
         this.iv = iv;
@@ -61,8 +58,8 @@ public class File {
         this.description = description;
         this.category = category;
         this.contentType = contentType;
-        this.owner = owner;
-        this.originalFile = originalFile;
+        this.ownerId = owner;
+        this.originalFileId = originalFile;
         this.timestamp = LocalDateTime.now();
     }
 }

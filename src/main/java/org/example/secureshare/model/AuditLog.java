@@ -17,17 +17,15 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    @JsonIgnore
-    private User user;
+    @Column(name = "user_id")
+    private Long userId;
 
     private String action;
     private String filename;
     private LocalDateTime timestamp;
 
-    public AuditLog(User user, String action, String filename) {
-        this.user = user;
+    public AuditLog(Long userId, String action, String filename) {
+        this.userId = userId;
         this.action = action;
         this.filename = filename;
         this.timestamp = LocalDateTime.now();
