@@ -3,6 +3,8 @@ package org.example.secureshare.controller;
 import org.example.secureshare.config.AppConstants;
 import org.example.secureshare.model.File;
 import org.example.secureshare.model.User;
+import org.example.secureshare.payload.fiteDTO.FetchFilesResponse;
+import org.example.secureshare.payload.sharedfileDTO.FetchUsersResponse;
 import org.example.secureshare.payload.sharedfileDTO.ShareFileRequest;
 import org.example.secureshare.payload.sharedfileDTO.SharedFilesResponse;
 import org.example.secureshare.repository.FileRepository;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -100,4 +103,26 @@ public class SharedFileController {
         auditLogService.logAction("FETCH_SHARED_FILES_TO_ME", "");
         return ResponseEntity.ok(sharedFiles);
     }
+
+    @GetMapping("fetch-shared/{fileId}")
+    public ResponseEntity<?> fetchUsersFileIsSharedWith(
+            @PathVariable Long fileId,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER,required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize",defaultValue = AppConstants.USERNAME_PAGE_SIZE,required = false)  Integer pageSize,
+            @RequestParam(name = "sortBy" , defaultValue = AppConstants.SORT_USERNAMES_BY,required = false) String sortBy,
+            @RequestParam(name = "sortOrder" , defaultValue = AppConstants.SORT_USERNAMES_DIR,required = false) String sortOrder) {
+        try {
+            FetchUsersResponse sharedUsers = sharedFileService.getUsersFileIsSharedWith(fileId,keyword, pageNumber, pageSize, sortBy, sortOrder);
+            auditLogService.logAction("FETCH_SHARED_USERS", "File ID: " + fileId);
+            return ResponseEntity.ok(Map.of("sharedUsers", sharedUsers));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to retrieve shared users."));
+        }
+    }
+
 }
