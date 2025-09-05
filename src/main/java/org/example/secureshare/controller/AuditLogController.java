@@ -5,10 +5,7 @@ import org.example.secureshare.payload.auditDTO.AuditLogsResponse;
 import org.example.secureshare.service.AuditLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth/logs")
@@ -26,5 +23,11 @@ public class AuditLogController {
     ) {
         AuditLogsResponse logs = auditLogService.getLogsForUser(pageNumber, pageSize, sortBy, sortOrder);
         return ResponseEntity.ok(logs);
+    }
+
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<?> deleteAllLogsForUser() {
+        auditLogService.deleteAllLogsForUser();
+        return ResponseEntity.ok().body("All audit logs deleted successfully for the user.");
     }
 }

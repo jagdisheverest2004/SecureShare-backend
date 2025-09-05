@@ -22,12 +22,7 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 @Service
 public class FileService {
@@ -75,7 +70,15 @@ public class FileService {
             SecretKey aesKey = keyService.generateAesKey();
             byte[] iv = keyService.generateIV();
 
-            byte[] encryptedFileData = keyService.encryptWithAesGcm(file.getBytes(), aesKey, iv);
+            // Encrypt the file and get the combined data (ciphertext + tag)
+            byte[] encryptedCombinedData = keyService.encryptWithAesGcm(file.getBytes(), aesKey, iv);
+
+            // Separate the ciphertext and the authentication tag
+            int tagLength = 16;
+            byte[] encryptedData = Arrays.copyOfRange(encryptedCombinedData, 0, encryptedCombinedData.length - tagLength);
+            byte[] authTagBytes = Arrays.copyOfRange(encryptedCombinedData, encryptedCombinedData.length - tagLength, encryptedCombinedData.length);
+
+            String authTagBase64 = Base64.getEncoder().encodeToString(authTagBytes);
 
             byte[] encryptedAesKeyBytes = keyService.encryptWithRsa(
                     keyService.getAesKeyBytes(aesKey),
@@ -83,7 +86,8 @@ public class FileService {
             );
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
-            File newFile = new File(encryptedFileData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), file.getOriginalFilename(), description, category, file.getContentType(), owner.getUserId());
+            // Save the file with the separated ciphertext and tag
+            File newFile = new File(encryptedData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), authTagBase64, file.getOriginalFilename(), description, category, file.getContentType(), owner.getUserId());
             File savedFile = fileRepository.save(newFile);
 
             savedFile.setOriginalFileId(savedFile.getId());
@@ -97,7 +101,6 @@ public class FileService {
         }
     }
 
-    // Add this new method to handle both data and metadata retrieval
     @Transactional(readOnly = true)
     public Map<String, Object> downloadFileAndGetMetadata(Long fileId) {
         try {
@@ -109,13 +112,14 @@ public class FileService {
                 throw new SecurityException("User is not authorized to access this file.");
             }
 
-            // Decrypt the user's private key with the master key before using it.
             PrivateKey ownerPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, ownerPrivateKey);
             SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
             byte[] iv = Base64.getDecoder().decode(file.getIv());
-            byte[] decryptedFileData = keyService.decryptWithAesGcm(file.getEncryptedData(), decryptedAesKey, iv);
+
+            // Re-combine the encrypted data and the GCM tag for decryption
+            byte[] decryptedFileData = keyService.decryptWithAesGcm(combineCiphertextAndTag(file.getEncryptedData(), file.getAuthTag()), decryptedAesKey, iv);
 
             Map<String, Object> result = new HashMap<>();
             result.put("fileData", decryptedFileData);
@@ -128,6 +132,15 @@ public class FileService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to download file due to a cryptographic error.", e);
         }
+    }
+
+    // Utility method to combine ciphertext and tag for decryption
+    private byte[] combineCiphertextAndTag(byte[] encryptedData, String authTagBase64) {
+        byte[] authTagBytes = Base64.getDecoder().decode(authTagBase64);
+        byte[] combined = new byte[encryptedData.length + authTagBytes.length];
+        System.arraycopy(encryptedData, 0, combined, 0, encryptedData.length);
+        System.arraycopy(authTagBytes, 0, combined, encryptedData.length, authTagBytes.length);
+        return combined;
     }
 
     @Transactional(readOnly = true)
@@ -178,7 +191,6 @@ public class FileService {
                 throw new SecurityException("User is not authorized to share this file.");
             }
 
-            // Decrypt the sender's private key with the master key before using it.
             PrivateKey senderPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFile.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, senderPrivateKey);
@@ -192,6 +204,7 @@ public class FileService {
                     originalFile.getEncryptedData(),
                     encryptedAesKeyForRecipientBase64,
                     originalFile.getIv(),
+                    originalFile.getAuthTag(),
                     originalFile.getFilename(),
                     originalFile.getDescription(),
                     originalFile.getCategory(),
@@ -227,28 +240,19 @@ public class FileService {
         }
 
         if(fileRepository.existbyOriginalFileIdAndFileId(fileId)) {
-
             switch (deletionType) {
                 case "me":
-                    // Delete only the original file from the sender's account.
                     fileRepository.delete(originalFile);
                     break;
-
                 case "everyone":
-                    // 1. Find all shared copies (recipient's files) and their logs
                     List<SharedFile> allSharedFileLogs = sharedFileRepository.findSharedFilesByFileId(fileId);
-                    // 2. Collect the file IDs of the recipient's copies
                     List<Long> recipientFileIds = allSharedFileLogs.stream()
                             .map(SharedFile::getNewFileId)
                             .toList();
-                    // 3. Delete the shared file logs FIRST
                     sharedFileRepository.deleteAll(allSharedFileLogs);
-                    // 4. Then, delete all the recipient's file copies
                     fileRepository.deleteAllById(recipientFileIds);
-                    // 5. Finally, delete the original file from the sender's wallet
                     fileRepository.delete(originalFile);
                     break;
-
                 case "list":
                     if (recipientUsernames == null || recipientUsernames.isEmpty()) {
                         throw new IllegalArgumentException("Recipient usernames cannot be empty for 'list' deletion.");
@@ -261,36 +265,26 @@ public class FileService {
                         recipientIds.add(user.getUserId());
                     }
 
-                    // 1. Find the shared file logs for the specified recipients
                     List<SharedFile> sharedFileLogsForRecipients = sharedFileRepository.findSharedFilesByFileIdAndRecipientId(fileId, recipientIds);
                     if (sharedFileLogsForRecipients.isEmpty()) {
                         throw new NoSuchElementException("No shared file logs found for the specified recipients.");
                     }
 
-                    // 2. Collect the file IDs of the recipient's copies
                     List<Long> recipientFilesToDeleteIds = sharedFileLogsForRecipients.stream()
                             .map(SharedFile::getNewFileId)
                             .toList();
 
-                    // 3. Delete the shared file logs FIRST
                     sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
-
-                    // 4. Then, delete the file records from the specified recipients' wallets
                     fileRepository.deleteAllById(recipientFilesToDeleteIds);
-
-                    // 5. Delete the original file from the sender's wallet
                     fileRepository.delete(originalFile);
                     break;
                 default:
                     throw new IllegalArgumentException("Invalid deletion type: " + deletionType);
             }
-        }
-        else{
+        } else {
             if (!"me".equals(deletionType)) {
-                // A recipient should only be able to delete their own copy
                 throw new IllegalArgumentException("Deletion type must be 'me' for a shared file copy.");
             }
-
             fileRepository.delete(originalFile);
             sharedFileRepository.deleteByNewFileId(fileId);
         }
@@ -307,23 +301,19 @@ public class FileService {
                 throw new SecurityException("User is not authorized to access this file.");
             }
 
-            // Step 1: Decrypt owner’s private key
             PrivateKey ownerPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
-
-            // Step 2: Decrypt AES key (Base64 → bytes → RSA decrypt)
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, ownerPrivateKey);
 
             String aesKeyBase64 = Base64.getEncoder().encodeToString(decryptedAesKeyBytes);
-            String ivBase64 = file.getIv(); // already Base64 in DB
+            String ivBase64 = file.getIv();
+            String authTagBase64 = file.getAuthTag();
 
-            // Step 3: Send email with key + iv
-            emailService.sendKeyAndIvJson(owner.getEmail(), aesKeyBase64, ivBase64);
+            emailService.sendKeyIvAndTagJson(owner.getEmail(), aesKeyBase64, ivBase64, authTagBase64);
 
-            // Step 4: Return encrypted file bytes + metadata
             Map<String, Object> result = new HashMap<>();
             result.put("encryptedFileData", file.getEncryptedData());
-            result.put("originalFilename", file.getFilename() + ".enc"); // ensure .enc extension
+            result.put("originalFilename", file.getFilename() + ".enc");
             result.put("contentType", file.getContentType());
             return result;
 
@@ -333,6 +323,4 @@ public class FileService {
             throw new RuntimeException("Failed to prepare encrypted download.", e);
         }
     }
-
-
 }

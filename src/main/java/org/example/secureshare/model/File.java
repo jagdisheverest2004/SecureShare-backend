@@ -26,6 +26,10 @@ public class File {
     @Column(columnDefinition = "TEXT")
     private String iv;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String authTag;
+
     private String filename;
     private String description;
     private String category;
@@ -38,10 +42,11 @@ public class File {
     @Column(name = "original_file_id")
     private Long originalFileId;
 
-    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, Long ownerId) {
+    public File(byte[] encryptedData, String encryptedAesKey, String iv, String authTag,String filename, String description, String category, String contentType, Long ownerId) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
         this.iv = iv;
+        this.authTag=authTag;
         this.filename = filename;
         this.description = description;
         this.category = category;
@@ -50,10 +55,11 @@ public class File {
         this.timestamp = LocalDateTime.now();
     }
 
-    public File(byte[] encryptedData, String encryptedAesKey, String iv, String filename, String description, String category, String contentType, Long owner, Long originalFile) {
+    public File(byte[] encryptedData, String encryptedAesKey, String iv,String authTag, String filename, String description, String category, String contentType, Long owner, Long originalFile) {
         this.encryptedData = encryptedData;
         this.encryptedAesKey = encryptedAesKey;
         this.iv = iv;
+        this.authTag=authTag;
         this.filename = filename;
         this.description = description;
         this.category = category;
