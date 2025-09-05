@@ -47,6 +47,9 @@ public class FileService {
     @Autowired
     private KeyService keyService;
 
+    @Autowired
+    private EmailService emailService;
+
     @Transactional
     public List<Long> storeFiles(MultipartFile[] files, String description, String category) throws IOException {
         if (files == null || files.length == 0) {
@@ -292,4 +295,44 @@ public class FileService {
             sharedFileRepository.deleteByNewFileId(fileId);
         }
     }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> downloadEncryptedFileAndSendKeys(Long fileId) {
+        try {
+            User owner = authUtil.getLoggedInUser();
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
+
+            if (!file.getOwnerId().equals(owner.getUserId())) {
+                throw new SecurityException("User is not authorized to access this file.");
+            }
+
+            // Step 1: Decrypt owner’s private key
+            PrivateKey ownerPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
+
+            // Step 2: Decrypt AES key (Base64 → bytes → RSA decrypt)
+            byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(file.getEncryptedAesKey());
+            byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, ownerPrivateKey);
+
+            String aesKeyBase64 = Base64.getEncoder().encodeToString(decryptedAesKeyBytes);
+            String ivBase64 = file.getIv(); // already Base64 in DB
+
+            // Step 3: Send email with key + iv
+            emailService.sendKeyAndIvJson(owner.getEmail(), aesKeyBase64, ivBase64);
+
+            // Step 4: Return encrypted file bytes + metadata
+            Map<String, Object> result = new HashMap<>();
+            result.put("encryptedFileData", file.getEncryptedData());
+            result.put("originalFilename", file.getFilename() + ".enc"); // ensure .enc extension
+            result.put("contentType", file.getContentType());
+            return result;
+
+        } catch (NoSuchElementException | SecurityException | IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to prepare encrypted download.", e);
+        }
+    }
+
+
 }
