@@ -221,8 +221,12 @@ public class FileService {
             return savedFile.getId();
 
         } catch (NoSuchElementException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
+            throw new RuntimeException("User is not authorized to share this file.", e);
+        }
+        catch (IllegalArgumentException e) {
+            throw new RuntimeException("Recipient already has access to this file.", e);
+        }
+        catch (Exception e) {
             throw new RuntimeException("Failed to share file due to a cryptographic error.", e);
         }
     }
