@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class SharedFilesResponse {
-    List<SharedFileResponse> fetchFiles;
+@NoArgsConstructor
+public class FetchUsersResponse {
+    private List<String> usernames;
     private Integer pageNumber;
     private Integer pageSize;
     private Long totalElements;

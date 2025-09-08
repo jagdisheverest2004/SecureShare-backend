@@ -68,6 +68,8 @@ public class KeyService {
 
     public String encodePublicKey(PublicKey publicKey) { return Base64.getEncoder().encodeToString(publicKey.getEncoded()); }
 
+    public String encodePrivateKey(PrivateKey privateKey) { return Base64.getEncoder().encodeToString(privateKey.getEncoded()); }
+
     public PublicKey decodePublicKey(String base64PublicKey) throws Exception {
         byte[] keyBytes = Base64.getDecoder().decode(base64PublicKey);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
