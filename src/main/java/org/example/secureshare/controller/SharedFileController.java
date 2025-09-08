@@ -115,7 +115,7 @@ public class SharedFileController {
         try {
             FetchUsersResponse sharedUsers = sharedFileService.getUsersFileIsSharedWith(fileId,keyword, pageNumber, pageSize, sortBy, sortOrder);
             auditLogService.logAction("FETCH_SHARED_USERS", "File ID: " + fileId);
-            return ResponseEntity.ok(Map.of("sharedUsers", sharedUsers));
+            return ResponseEntity.ok(sharedUsers);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (SecurityException e) {

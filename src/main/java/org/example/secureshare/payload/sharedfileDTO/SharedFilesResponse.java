@@ -10,7 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SharedFilesResponse {
-    List<SharedFileResponse> sharedFiles;
+    List<SharedFileResponse> fetchFiles;
     private Integer pageNumber;
     private Integer pageSize;
     private Long totalElements;

@@ -117,7 +117,7 @@ public class SharedFileService {
                      return sharedFileResponse1;
                 })
                 .toList();
-        response.setSharedFiles(sharedFileResponse);
+        response.setFetchFiles(sharedFileResponse);
         response.setPageNumber(logs.getNumber() + 1); // Pages are 0
         response.setPageSize(logs.getSize());
         response.setTotalElements(logs.getTotalElements());
@@ -184,7 +184,7 @@ public class SharedFileService {
                     return sharedFileResponse1;
                 })
                 .toList();
-        response.setSharedFiles(sharedFileResponse);
+        response.setFetchFiles(sharedFileResponse);
         response.setPageNumber(logs.getNumber() + 1); // Pages are 0
         response.setPageSize(logs.getSize());
         response.setTotalElements(logs.getTotalElements());
