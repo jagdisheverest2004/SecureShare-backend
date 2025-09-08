@@ -191,6 +191,10 @@ public class FileService {
                 throw new SecurityException("User is not authorized to share this file.");
             }
 
+            if(fileRepository.existbyOriginalFileIdAndOwnerId(fileId, recipient.getUserId())) {
+                throw new IllegalArgumentException("Recipient already has access to this file.");
+            }
+
             PrivateKey senderPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFile.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, senderPrivateKey);
