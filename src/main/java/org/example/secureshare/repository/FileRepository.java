@@ -17,4 +17,7 @@ public interface FileRepository extends JpaRepository<File, Long>, JpaSpecificat
 
     @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END FROM File f WHERE f.originalFileId = ?1 AND f.id = ?1")
     Boolean existbyOriginalFileIdAndFileId(Long fileId);
+
+    @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END FROM File f WHERE f.originalFileId = ?1 AND f.ownerId = ?2")
+    Boolean existbyOriginalFileIdAndOwnerId(Long fileId, Long userId);
 }

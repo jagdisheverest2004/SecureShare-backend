@@ -69,4 +69,10 @@ public class AuditLogService {
         Pageable pageable = PageRequest.of(pageNumber -1, pageSize,sortByAndOrder);
         return pageable;
     }
+
+    @Transactional
+    public void deleteAllLogsForUser() {
+        User user = authUtil.getLoggedInUser();
+        auditLogRepository.deleteByUserId(user.getUserId());
+    }
 }

@@ -25,11 +25,18 @@ public class OtpController {
     @PostMapping("/send")
     public ResponseEntity<?> sendOtp(@RequestBody OtpRequest request) {
         try {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Email is already registered.");
+            }
             otpService.generateAndSendOtp(request.getEmail());
             return ResponseEntity.ok(new MessageResponse("OTP sent successfully to your email."));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
+        }
+        catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+        catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to send OTP."));
         }
     }

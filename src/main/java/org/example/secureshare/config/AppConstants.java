@@ -11,4 +11,7 @@ public class AppConstants {
     public static final String SORT_SHARED_FILES_DIR = "desc";
     public static final String SORT_AUDIT_LOGS_BY = "id" ;
     public static final String SORT_AUDIT_LOGS_DIR = "desc";
+    public static final String USERNAME_PAGE_SIZE = "10" ;
+    public static final String SORT_USERNAMES_BY = "id" ;
+    public static final String SORT_USERNAMES_DIR = "asc";
 }

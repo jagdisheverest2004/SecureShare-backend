@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -122,5 +123,35 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred during file deletion: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/download/encrypted/{fileId}")
+    public ResponseEntity<?> downloadEncryptedFile(@PathVariable("fileId") Long fileId) {
+        try {
+            Map<String, Object> encryptedData = fileService.downloadEncryptedFileAndSendKeys(fileId);
+
+            byte[] encryptedFile = (byte[]) encryptedData.get("encryptedFileData");
+            String filename = (String) encryptedData.get("originalFilename");
+            String contentType = (String) encryptedData.get("contentType");
+
+            // Log the file download action
+            auditLogService.logAction("ENCRYPTED_FILE_DOWNLOAD", filename);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", filename);
+            headers.setContentLength(encryptedFile.length);
+
+            return ResponseEntity.ok().headers(headers).body(encryptedFile);
+
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
 
 }

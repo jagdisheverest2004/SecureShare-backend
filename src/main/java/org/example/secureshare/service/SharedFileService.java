@@ -1,8 +1,10 @@
 package org.example.secureshare.service;
 
+import jakarta.persistence.criteria.*;
 import org.example.secureshare.model.File;
 import org.example.secureshare.model.SharedFile;
 import org.example.secureshare.model.User;
+import org.example.secureshare.payload.sharedfileDTO.FetchUsersResponse;
 import org.example.secureshare.payload.sharedfileDTO.SharedFileResponse;
 import org.example.secureshare.payload.sharedfileDTO.SharedFilesResponse;
 import org.example.secureshare.repository.FileRepository;
@@ -70,18 +72,25 @@ public class SharedFileService {
         if (keyword != null && !keyword.isEmpty()) {
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
-            User recipient = userRepository.findByUsername(keyword).orElse(null);
+            spec = spec.and((root, query, cb) -> {
+                // Subquery for matching recipient usernames
+                Subquery<Long> subquery = query.subquery(Long.class);
+                Root<User> userRoot = subquery.from(User.class);
 
-            Specification<SharedFile> keywordSpec = (root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("filename")), likeKeyword));
-            keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("category")), likeKeyword));
-            if(recipient != null) {
-                Long recipientId = recipient.getUserId();
-                keywordSpec = keywordSpec.or((root, query, cb) -> cb.equal(root.get("recipientId"), recipientId));
-            }
+                subquery.select(userRoot.get("userId"))
+                        .where(cb.like(cb.lower(userRoot.get("username")), likeKeyword));
 
-            spec = spec.and(keywordSpec);
+                // Match against SharedFile.recipientId
+                Predicate recipientMatch = root.get("recipientId").in(subquery);
+
+                // Match against filename/category
+                Predicate filenameMatch = cb.like(cb.lower(root.get("filename")), likeKeyword);
+                Predicate categoryMatch = cb.like(cb.lower(root.get("category")), likeKeyword);
+
+                return cb.or(recipientMatch, filenameMatch, categoryMatch);
+            });
         }
+
 
         Page<SharedFile> logs = sharedFileRepository.findAll(spec, pageable);
 
@@ -108,7 +117,7 @@ public class SharedFileService {
                      return sharedFileResponse1;
                 })
                 .toList();
-        response.setSharedFiles(sharedFileResponse);
+        response.setFetchFiles(sharedFileResponse);
         response.setPageNumber(logs.getNumber() + 1); // Pages are 0
         response.setPageSize(logs.getSize());
         response.setTotalElements(logs.getTotalElements());
@@ -131,18 +140,25 @@ public class SharedFileService {
         if (keyword != null && !keyword.isEmpty()) {
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
-            User sender = userRepository.findByUsername(keyword).orElse(null);
+            spec = spec.and((root, query, cb) -> {
+                // Subquery for matching recipient usernames
+                Subquery<Long> subquery = query.subquery(Long.class);
+                Root<User> userRoot = subquery.from(User.class);
 
-            Specification<SharedFile> keywordSpec = (root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("filename")), likeKeyword));
-            keywordSpec = keywordSpec.or((root, query, cb) -> cb.like(cb.lower(root.get("category")), likeKeyword));
-            if(sender != null) {
-                Long senderId = sender.getUserId();
-                keywordSpec = keywordSpec.or((root, query, cb) -> cb.equal(root.get("recipientId"), senderId));
-            }
+                subquery.select(userRoot.get("userId"))
+                        .where(cb.like(cb.lower(userRoot.get("username")), likeKeyword));
 
-            spec = spec.and(keywordSpec);
+                // Match against SharedFile.recipientId
+                Predicate recipientMatch = root.get("senderId").in(subquery);
+
+                // Match against filename/category
+                Predicate filenameMatch = cb.like(cb.lower(root.get("filename")), likeKeyword);
+                Predicate categoryMatch = cb.like(cb.lower(root.get("category")), likeKeyword);
+
+                return cb.or(recipientMatch, filenameMatch, categoryMatch);
+            });
         }
+
 
         Page<SharedFile> logs = sharedFileRepository.findAll(spec, pageable);
 
@@ -168,7 +184,7 @@ public class SharedFileService {
                     return sharedFileResponse1;
                 })
                 .toList();
-        response.setSharedFiles(sharedFileResponse);
+        response.setFetchFiles(sharedFileResponse);
         response.setPageNumber(logs.getNumber() + 1); // Pages are 0
         response.setPageSize(logs.getSize());
         response.setTotalElements(logs.getTotalElements());
@@ -181,5 +197,60 @@ public class SharedFileService {
         Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc") ? Sort.by(Sort.Direction.ASC, sortBy) : Sort.by(Sort.Direction.DESC, sortBy);
         Pageable pageable = PageRequest.of(pageNumber -1, pageSize,sortByAndOrder);
         return pageable;
+    }
+
+    public FetchUsersResponse getUsersFileIsSharedWith(
+            Long fileId, String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+
+        User owner = authUtil.getLoggedInUser();
+        File originalFile = fileRepository.findById(fileId)
+                .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
+
+        if (originalFile.getOriginalFileId() != null && !originalFile.getOriginalFileId().equals(originalFile.getId())) {
+            throw new IllegalArgumentException("The specified file is not an original file owned by the user.");
+        }
+
+        if (!originalFile.getOwnerId().equals(owner.getUserId())) {
+            throw new SecurityException("User is not authorized to access this file's sharing information.");
+        }
+
+        Pageable pageable = getPageable(pageNumber, pageSize, sortBy, sortOrder);
+
+        Specification<SharedFile> spec = (root, query, cb) -> cb.equal(root.get("originalFileId"), originalFile.getId());
+
+        if (keyword != null && !keyword.isEmpty()) {
+            String likeKeyword = "%" + keyword.toLowerCase() + "%";
+
+            spec = spec.and((root, query, cb) -> {
+                // Subquery for matching recipient usernames
+                Subquery<Long> subquery = query.subquery(Long.class);
+                Root<User> userRoot = subquery.from(User.class);
+
+                subquery.select(userRoot.get("userId"))
+                        .where(cb.like(cb.lower(userRoot.get("username")), likeKeyword));
+
+                // Match against SharedFile.recipientId
+                Predicate recipientMatch = root.get("recipientId").in(subquery);
+                return cb.or(recipientMatch);
+            });
+        }
+
+        Page<SharedFile> sharedFiles = sharedFileRepository.findAll(spec, pageable);
+
+        // Convert into DTO with recipient + sender usernames
+        FetchUsersResponse response = new FetchUsersResponse();
+        List<String> recipientUsernames = sharedFiles.stream()
+                .map(sf -> userRepository.findById(sf.getRecipientId())
+                        .map(User::getUsername)
+                        .orElse("Unknown"))
+                .toList();
+
+        response.setUsernames(recipientUsernames);
+        response.setPageNumber(sharedFiles.getNumber() + 1); // Pages are 0
+        response.setPageSize(sharedFiles.getSize());
+        response.setTotalElements(sharedFiles.getTotalElements());
+        response.setTotalPages(sharedFiles.getTotalPages());
+        response.setLastPage(sharedFiles.isLast());
+        return response;
     }
 }
