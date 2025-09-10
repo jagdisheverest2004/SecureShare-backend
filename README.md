@@ -26,6 +26,6 @@ SecureShare is a robust, full-stack application designed to provide a secure and
 
 * **Backend**: Java, Spring Boot
 * **Security**: Spring Security, JSON Web Tokens (JWT), BCrypt, Java Cryptography Architecture (JCA)
-* **Database**: PostgreSQL
+* **Database**: MySQL
 * **Data Access**: Spring Data JPA, Hibernate
 * **Email Service**: JavaMailSender (SMTP)
