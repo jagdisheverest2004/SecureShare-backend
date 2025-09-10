@@ -61,7 +61,7 @@ public class KeyDownloadService {
         return resource;
     }
 
-    // ✅ Helper: split long Base64 string into 64-char lines (PEM standard)
+    // Helper: split long Base64 string into 64-char lines (PEM standard)
     private String chunkString(String str) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < str.length(); i += 64) {

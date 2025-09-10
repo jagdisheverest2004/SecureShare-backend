@@ -308,7 +308,6 @@ public class FileService {
 
                     sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
                     fileRepository.deleteAllById(recipientFilesToDeleteIds);
-                    fileRepository.delete(originalFile);
                     break;
                 default:
                     throw new IllegalArgumentException("Invalid deletion type: " + deletionType);

@@ -66,7 +66,6 @@ public class KeyService {
 
     public String encodePublicKey(PublicKey publicKey) { return Base64.getEncoder().encodeToString(publicKey.getEncoded()); }
 
-    // This method is now redundant and will be removed in favor of encryptPrivateKey
     public String encodePrivateKey(PrivateKey privateKey) { return Base64.getEncoder().encodeToString(privateKey.getEncoded()); }
 
     public PublicKey decodePublicKey(String base64PublicKey) throws Exception {
@@ -122,7 +121,6 @@ public class KeyService {
         return iv;
     }
 
-    // New methods for digital signatures
     public byte[] signData(byte[] data, PrivateKey privateKey) throws Exception {
         Signature signature = Signature.getInstance("SHA256withRSA");
         signature.initSign(privateKey);
