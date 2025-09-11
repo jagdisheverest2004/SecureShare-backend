@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -39,7 +38,6 @@ public class FileController {
             List<Long> fileIds = fileService.storeFiles(files, description, category);
 
             for(MultipartFile file : files) {
-                // Pass the User object instead of the username
                 auditLogService.logAction("FILE_UPLOAD", file.getOriginalFilename());
             }
 

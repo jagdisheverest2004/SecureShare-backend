@@ -27,7 +27,6 @@ public class KeyService {
         return new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
     }
 
-    // New methods for master key encryption/decryption
     public String encryptPrivateKey(PrivateKey privateKey) throws Exception {
         byte[] privateKeyBytes = privateKey.getEncoded();
         SecretKey masterKey = getMasterKey();
@@ -59,7 +58,6 @@ public class KeyService {
         return kf.generatePrivate(spec);
     }
 
-    // existing methods...
     public KeyPair generateRsaKeyPair() throws NoSuchAlgorithmException {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(2048);
@@ -76,6 +74,7 @@ public class KeyService {
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePublic(spec);
     }
+
     public byte[] encryptWithRsa(byte[] data, PublicKey publicKey) throws Exception {
         Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
         cipher.init(Cipher.ENCRYPT_MODE, publicKey);
@@ -120,5 +119,19 @@ public class KeyService {
         byte[] iv = new byte[GCM_IV_LENGTH];
         new SecureRandom().nextBytes(iv);
         return iv;
+    }
+
+    public byte[] signData(byte[] data, PrivateKey privateKey) throws Exception {
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(privateKey);
+        signature.update(data);
+        return signature.sign();
+    }
+
+    public boolean verifySignature(byte[] data, byte[] signature, PublicKey publicKey) throws Exception {
+        Signature verifier = Signature.getInstance("SHA256withRSA");
+        verifier.initVerify(publicKey);
+        verifier.update(data);
+        return verifier.verify(signature);
     }
 }

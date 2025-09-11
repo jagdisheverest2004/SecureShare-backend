@@ -67,6 +67,12 @@ public class FileService {
                 throw new IllegalArgumentException("File cannot be empty.");
             }
 
+            String metadata = file.getOriginalFilename() + description + category;
+            PrivateKey ownerPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
+            byte[] signatureBytes = keyService.signData(metadata.getBytes(), ownerPrivateKey);
+            String signature = Base64.getEncoder().encodeToString(signatureBytes);
+
+
             SecretKey aesKey = keyService.generateAesKey();
             byte[] iv = keyService.generateIV();
 
@@ -87,7 +93,7 @@ public class FileService {
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
             // Save the file with the separated ciphertext and tag
-            File newFile = new File(encryptedData, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), authTagBase64, file.getOriginalFilename(), description, category, file.getContentType(), owner.getUserId());
+            File newFile = new File(encryptedData, signature, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), authTagBase64, file.getOriginalFilename(), description, category, file.getContentType(), owner.getUserId());
             File savedFile = fileRepository.save(newFile);
 
             savedFile.setOriginalFileId(savedFile.getId());
@@ -110,6 +116,17 @@ public class FileService {
 
             if (!file.getOwnerId().equals(owner.getUserId())) {
                 throw new SecurityException("User is not authorized to access this file.");
+            }
+
+            // Verify the file signature to ensure integrity
+            Long originalOwnerId = fileRepository.findByIdAndOriginalFileId(file.getOriginalFileId());
+            User originalOwner = userRepository.findById(originalOwnerId)
+                    .orElseThrow(() -> new NoSuchElementException("Original file owner not found with ID: " + originalOwnerId));
+
+            String metadata = file.getFilename() + file.getDescription() + file.getCategory();
+            boolean isSignatureValid = keyService.verifySignature(metadata.getBytes(), Base64.getDecoder().decode(file.getSignature()), keyService.decodePublicKey(originalOwner.getPublicKey()));
+            if (!isSignatureValid) {
+                throw new SecurityException("File integrity check failed: Invalid signature.");
             }
 
             PrivateKey ownerPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
@@ -195,6 +212,12 @@ public class FileService {
                 throw new IllegalArgumentException("Recipient already has access to this file.");
             }
 
+            String metadata = originalFile.getFilename() + originalFile.getDescription() + originalFile.getCategory();
+            boolean isSignatureValid = keyService.verifySignature(metadata.getBytes(), Base64.getDecoder().decode(originalFile.getSignature()), keyService.decodePublicKey(owner.getPublicKey()));
+            if (!isSignatureValid) {
+                throw new SecurityException("File integrity check failed: Invalid signature.");
+            }
+
             PrivateKey senderPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
             byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFile.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, senderPrivateKey);
@@ -206,6 +229,7 @@ public class FileService {
 
             File sharedFile = new File(
                     originalFile.getEncryptedData(),
+                    originalFile.getSignature(),
                     encryptedAesKeyForRecipientBase64,
                     originalFile.getIv(),
                     originalFile.getAuthTag(),
@@ -221,8 +245,12 @@ public class FileService {
             return savedFile.getId();
 
         } catch (NoSuchElementException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
+            throw new RuntimeException("User is not authorized to share this file.", e);
+        }
+        catch (IllegalArgumentException e) {
+            throw new RuntimeException("Recipient already has access to this file.", e);
+        }
+        catch (Exception e) {
             throw new RuntimeException("Failed to share file due to a cryptographic error.", e);
         }
     }
@@ -280,7 +308,6 @@ public class FileService {
 
                     sharedFileRepository.deleteAll(sharedFileLogsForRecipients);
                     fileRepository.deleteAllById(recipientFilesToDeleteIds);
-                    fileRepository.delete(originalFile);
                     break;
                 default:
                     throw new IllegalArgumentException("Invalid deletion type: " + deletionType);

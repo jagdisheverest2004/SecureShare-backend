@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -83,7 +82,12 @@ public class UserService {
         List<Long> userFileIds = userFiles.stream().map(File::getId).toList();
 
         for(Long fileId : userFileIds) {
-            fileService.deleteFile(fileId, "everyone",new ArrayList<String>()); // false indicates not to log this action again
+            if(fileRepository.existbyOriginalFileIdAndOwnerId(fileId,user.getUserId())) {
+                fileService.deleteFile(fileId, "everyone", new ArrayList<String>());
+            }
+            else{
+                fileService.deleteFile(fileId,"me", new ArrayList<String>());
+            }
         }
 
         List<AuditLog> auditLogList = auditLogRepository.findAuditLogsByUserId(user.getUserId());
