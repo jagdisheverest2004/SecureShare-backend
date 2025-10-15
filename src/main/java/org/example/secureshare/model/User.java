@@ -44,12 +44,12 @@ public class User {
     private Role role;
 
     @Lob
-    @Column(name = "public_key" , columnDefinition = "LONGTEXT")
+    @Column(name = "public_key" , columnDefinition = "TEXT")
     @JsonIgnore
     private String publicKey;
 
     @Lob
-    @Column(name = "private_key" , columnDefinition = "LONGTEXT")
+    @Column(name = "private_key" , columnDefinition = "TEXT")
     @JsonIgnore
     private String privateKey;
 

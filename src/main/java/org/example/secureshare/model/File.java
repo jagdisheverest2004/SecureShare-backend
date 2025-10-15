@@ -15,7 +15,7 @@ public class File {
     private Long id;
 
     @Lob
-    @Column(columnDefinition = "LONGBLOB")
+    @Column(columnDefinition = "BYTEA")
     private byte[] encryptedData;
 
     @Lob

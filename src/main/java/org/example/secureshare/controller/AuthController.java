@@ -113,7 +113,6 @@ public class AuthController {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             otpService.generateAndSendOtp(userDetails.getEmail());
             return ResponseEntity.ok(new MessageResponse("OTP sent to your registered email. Please verify to sign in."));
@@ -169,7 +168,6 @@ public class AuthController {
     public ResponseEntity<?> logoutUser() {
 
         User user = authUtil.getLoggedInUser();
-
         ResponseCookie cookie = jwtUtils.generateNoTokenFromCookie();
         Map<String, Object> response = new HashMap<>();
         response.put("message", "User signed out successfully!");
