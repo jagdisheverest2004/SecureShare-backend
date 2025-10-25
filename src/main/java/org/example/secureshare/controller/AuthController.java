@@ -1,5 +1,6 @@
 package org.example.secureshare.controller;
 
+
 import org.example.secureshare.model.AppRole;
 import org.example.secureshare.model.Role;
 import org.example.secureshare.model.User;
@@ -29,6 +30,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.KeyPair;
@@ -125,6 +127,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
+    @Transactional(rollbackFor = {NoSuchElementException.class, IllegalArgumentException.class})
     public ResponseEntity<?> verifyOtpAndLogin(@RequestBody VerifyOtpRequest verifyOtpRequest) {
         String username = verifyOtpRequest.getUsername();
         String otp = verifyOtpRequest.getOtp();

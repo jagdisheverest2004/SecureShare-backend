@@ -1,6 +1,6 @@
 package org.example.secureshare.service;
 
-import jakarta.transaction.Transactional;
+
 import org.example.secureshare.model.AuditLog;
 import org.example.secureshare.model.File;
 import org.example.secureshare.model.User;
@@ -13,6 +13,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +74,7 @@ public class UserService {
         mailSender.send(message);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public void deleteAccount(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
@@ -96,6 +97,7 @@ public class UserService {
         userRepository.delete(user);
     }
 
+    @Transactional(readOnly = true)
     public SettingsDTO getUserSettings(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));

@@ -14,7 +14,6 @@ public class File {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob
     @Column(columnDefinition = "BYTEA")
     private byte[] encryptedData;
 

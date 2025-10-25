@@ -195,7 +195,8 @@ public class SharedFileService {
 
     private Pageable getPageable(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc") ? Sort.by(Sort.Direction.ASC, sortBy) : Sort.by(Sort.Direction.DESC, sortBy);
-        Pageable pageable = PageRequest.of(pageNumber -1, pageSize,sortByAndOrder);
+        int zeroBasedPageNumber = Math.max(0, pageNumber - 1);
+        Pageable pageable = PageRequest.of(zeroBasedPageNumber, pageSize,sortByAndOrder);
         return pageable;
     }
 
