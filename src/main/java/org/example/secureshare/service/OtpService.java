@@ -3,6 +3,7 @@ package org.example.secureshare.service;
 import org.example.secureshare.model.Otp;
 import org.example.secureshare.repository.OtpRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -15,12 +16,14 @@ import java.util.NoSuchElementException;
 @Service
 public class OtpService {
 
+    @Value("${spring.mail.username}")
+    private String senderEmail;
+
     @Autowired
     private JavaMailSender mailSender;
 
     @Autowired
     private OtpRepository otpRepository;
-
 
     @Transactional
     public void generateAndSendOtp(String email) {
@@ -31,6 +34,7 @@ public class OtpService {
         otpRepository.save(otp);
 
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderEmail);
         message.setTo(email);
         message.setSubject("Your OTP for Verification");
         message.setText("Hello,\n\nYour One-Time Password (OTP) is: " + otpCode + "\n\nThis OTP is valid for 2 minutes.");
