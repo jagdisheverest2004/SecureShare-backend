@@ -16,7 +16,7 @@ import java.util.NoSuchElementException;
 @Service
 public class OtpService {
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.properties.mail.smtp.from}")
     private String senderEmail;
 
     @Autowired

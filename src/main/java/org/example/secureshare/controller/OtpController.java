@@ -5,6 +5,8 @@ import org.example.secureshare.payload.otpDTO.OtpRequest;
 import org.example.secureshare.payload.otpDTO.OtpVerificationRequest;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.service.OtpService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,8 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/api/auth/otp")
 public class OtpController {
+
+    private static final Logger logger = LoggerFactory.getLogger(OtpController.class);
 
     @Autowired
     private OtpService otpService;
@@ -37,6 +41,7 @@ public class OtpController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
         catch (Exception e) {
+            logger.error("Failed to send OTP due to an unexpected error", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to send OTP."));
         }
     }
