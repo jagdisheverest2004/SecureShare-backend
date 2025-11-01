@@ -63,6 +63,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .requestMatchers("/").permitAll()
                                 .requestMatchers("/api/auth/authenticate/signup").permitAll()
                                 .requestMatchers("/api/auth/authenticate/signin").permitAll()
                                 .requestMatchers("/api/auth/authenticate/verify-otp").permitAll()
