@@ -144,6 +144,8 @@ public class AuthController {
 
                 UserDetailsImpl userDetails = new UserDetailsImpl(user.getUserId(), user.getUsername(), user.getEmail(), user.getPassword(), Collections.singletonList((GrantedAuthority) () -> "ROLE_USER"));
 
+                String jwtTokenString = jwtUtils.generateTokenFromUserName(userDetails.getUsername());
+
                 ResponseCookie jwtCookie = jwtUtils.generateTokenFromCookie(userDetails);
                 List<String> roles = userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
@@ -153,7 +155,7 @@ public class AuthController {
                         userDetails.getId(),
                         userDetails.getUsername(),
                         roles,
-                        jwtCookie.toString()
+                        jwtTokenString
                 );
 
                 auditLogService.logAction(user.getUserId(), "USER_SIGNED_IN" , "");

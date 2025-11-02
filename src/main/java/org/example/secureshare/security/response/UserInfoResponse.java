@@ -15,7 +15,6 @@ public class UserInfoResponse {
     private String username;
     private List<String> roles;
 
-    @JsonIgnore
     private String jwtToken;
 
     public UserInfoResponse(Long id, String username, List<String> roles) {

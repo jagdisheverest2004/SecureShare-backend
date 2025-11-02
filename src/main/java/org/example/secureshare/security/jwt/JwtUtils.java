@@ -70,6 +70,8 @@ public class JwtUtils {
                 .httpOnly(true)
                 .path("/api")
                 .maxAge(24*60*60) // 24 hours
+                .secure(true)       // <-- ADD THIS
+                .sameSite("None")
                 .build();
     }
 
