@@ -211,9 +211,16 @@ public class FileService {
     }
 
     @Transactional
-    public Long shareFile(Long fileId, User recipient) {
+    public Long shareFile(Long fileId, String recipientUsername) {
         try {
-            User owner = authUtil.getLoggedInUser();
+
+            String ownerUsername = authUtil.getLoggedInUsername();
+            User owner = userRepository.findByUsername(ownerUsername)
+                    .orElseThrow(() -> new NoSuchElementException("User not found with username: " + ownerUsername));
+
+            User recipient = userRepository.findByUsername(recipientUsername)
+                    .orElseThrow(() -> new NoSuchElementException("Recipient not found with username: " + recipientUsername));
+
             File originalFile = fileRepository.findById(fileId)
                     .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
 
@@ -240,8 +247,11 @@ public class FileService {
             byte[] encryptedAesKeyForRecipientBytes = keyService.encryptWithRsa(keyService.getAesKeyBytes(decryptedAesKey), recipientPublicKey);
             String encryptedAesKeyForRecipientBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyForRecipientBytes);
 
-            File sharedFile = new File(); // Use the default constructor
-            sharedFile.setEncryptedData(originalFile.getEncryptedData());
+            byte[] originalData = originalFile.getEncryptedData();
+            byte[] dataCopy = Arrays.copyOf(originalData, originalData.length);
+
+            File sharedFile = new File();
+            sharedFile.setEncryptedData(dataCopy);
             sharedFile.setSignature(originalFile.getSignature());
             sharedFile.setEncryptedAesKey(encryptedAesKeyForRecipientBase64);
             sharedFile.setIv(originalFile.getIv());

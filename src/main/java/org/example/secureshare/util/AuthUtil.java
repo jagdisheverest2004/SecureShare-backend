@@ -24,4 +24,12 @@ public class AuthUtil {
         return user;
     }
 
+    public String getLoggedInUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new SecurityException("No authenticated user found in security context.");
+        }
+        return authentication.getName();
+    }
+
 }

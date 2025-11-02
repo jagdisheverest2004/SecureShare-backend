@@ -45,8 +45,6 @@ public class SharedFileController {
     public ResponseEntity<?> shareFile(@RequestBody ShareFileRequest request) {
         try {
 
-            User recipient = userRepository.findByUsername(request.getRecipientUsername())
-                    .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + request.getRecipientUsername()));
 
             //Check whether the file sharing user is the owner of the file
             Boolean exist  = fileRepository.existbyOriginalFileIdAndFileId(request.getFileId());
@@ -54,7 +52,10 @@ public class SharedFileController {
                 throw new SecurityException("You do not have permission to share this file.");
             }
 
-            Long sharedFileId = fileService.shareFile(request.getFileId(), recipient);
+            Long sharedFileId = fileService.shareFile(request.getFileId(), request.getRecipientUsername());
+
+            User recipient = userRepository.findByUsername(request.getRecipientUsername())
+                    .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + request.getRecipientUsername()));
 
             // Log the sharing transaction
             sharedFileService.logFileShare(
