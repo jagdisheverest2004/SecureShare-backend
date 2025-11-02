@@ -14,6 +14,8 @@ public class File {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Lob
+    @Basic(fetch = FetchType.EAGER)
     @Column(columnDefinition = "BYTEA")
     private byte[] encryptedData;
 
@@ -36,7 +38,7 @@ public class File {
     private String filename;
     private String description;
     private String category;
-    private String contentType; // New field to store the MIME type
+    private String contentType;
     private LocalDateTime timestamp;
 
     @Column(name = "owner_id")
@@ -45,19 +47,19 @@ public class File {
     @Column(name = "original_file_id")
     private Long originalFileId;
 
-    public File(byte[] encryptedData,String signature, String encryptedAesKey, String iv, String authTag,String filename, String description, String category, String contentType, Long ownerId) {
-        this.encryptedData = encryptedData;
-        this.encryptedAesKey = encryptedAesKey;
-        this.signature=signature;
-        this.iv = iv;
-        this.authTag=authTag;
-        this.filename = filename;
-        this.description = description;
-        this.category = category;
-        this.contentType = contentType;
-        this.ownerId = ownerId;
-        this.timestamp = LocalDateTime.now();
-    }
+//    public File(byte[] encryptedData,String signature, String encryptedAesKey, String iv, String authTag,String filename, String description, String category, String contentType, Long ownerId) {
+//        this.encryptedData = encryptedData;
+//        this.encryptedAesKey = encryptedAesKey;
+//        this.signature=signature;
+//        this.iv = iv;
+//        this.authTag=authTag;
+//        this.filename = filename;
+//        this.description = description;
+//        this.category = category;
+//        this.contentType = contentType;
+//        this.ownerId = ownerId;
+//        this.timestamp = LocalDateTime.now();
+//    }
 
     public File(byte[] encryptedData, String signature, String encryptedAesKey, String iv,String authTag, String filename, String description, String category, String contentType, Long owner, Long originalFile) {
         this.encryptedData = encryptedData;

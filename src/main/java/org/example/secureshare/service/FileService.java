@@ -93,7 +93,19 @@ public class FileService {
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
             // Save the file with the separated ciphertext and tag
-            File newFile = new File(encryptedData, signature, encryptedAesKeyBase64, Base64.getEncoder().encodeToString(iv), authTagBase64, file.getOriginalFilename(), description, category, file.getContentType(), owner.getUserId());
+            File newFile = new File(
+                    encryptedData,
+                    signature,
+                    encryptedAesKeyBase64,
+                    Base64.getEncoder().encodeToString(iv),
+                    authTagBase64,
+                    file.getOriginalFilename(),
+                    description,
+                    category,
+                    file.getContentType(),
+                    owner.getUserId(),
+                    null
+            );
             File savedFile = fileRepository.save(newFile);
 
             savedFile.setOriginalFileId(savedFile.getId());
