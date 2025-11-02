@@ -93,7 +93,7 @@ public class UserService {
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
-            Response response = sg.api(request); // Fire and forget, or log status
+            Response response = sg.api(request);
 
             if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
                 // Log the error but don't crash the user's request

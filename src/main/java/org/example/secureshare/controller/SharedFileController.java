@@ -13,6 +13,8 @@ import org.example.secureshare.service.FileService;
 import org.example.secureshare.service.SharedFileService;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.util.AuthUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,8 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/api/auth/shared-files")
 public class SharedFileController {
+
+    private static final Logger logger = LoggerFactory.getLogger(SharedFileController.class); // <-- ADD THIS
 
     @Autowired
     private FileService fileService;
@@ -41,39 +45,35 @@ public class SharedFileController {
     @Autowired
     private AuditLogService auditLogService;
 
+
     @PostMapping("/share")
     public ResponseEntity<?> shareFile(@RequestBody ShareFileRequest request) {
         try {
-
-
-            //Check whether the file sharing user is the owner of the file
-            Boolean exist  = fileRepository.existbyOriginalFileIdAndFileId(request.getFileId());
-            if(!exist) {
-                throw new SecurityException("You do not have permission to share this file.");
-            }
-
-            Long sharedFileId = fileService.shareFile(request.getFileId(), request.getRecipientUsername());
-
-            User recipient = userRepository.findByUsername(request.getRecipientUsername())
-                    .orElseThrow(() -> new NoSuchElementException("Recipient not found: " + request.getRecipientUsername()));
-
-            // Log the sharing transaction
-            sharedFileService.logFileShare(
+            // The service now handles validation, saving, and logging in one transaction.
+            Long sharedFileId = fileService.shareFile(
                     request.getFileId(),
-                    sharedFileId,
-                    recipient.getUserId(),
-                    String.valueOf(request.getIsSensitive())
+                    request.getRecipientUsername(),
+                    request.getIsSensitive()
             );
+            // --- END OF SIMPLIFIED CALL ---
+
+            // The logFileShare call is no longer needed here, it's in FileService
 
             auditLogService.logAction("FILE_SHARED", "File ID: " + request.getFileId() + " shared with " + request.getRecipientUsername());
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "File shared successfully!"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "File shared successfully!", "newFileId", sharedFileId));
 
         } catch (NoSuchElementException e) {
+            logger.warn("Share failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (SecurityException e) {
+            logger.warn("Share failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) { // <-- Catches "Recipient already has access"
+            logger.warn("Share failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred during file sharing: " + e.getMessage()));
+            logger.error("An unexpected error occurred during file sharing controller logic", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred: " + e.getMessage()));
         }
     }
 

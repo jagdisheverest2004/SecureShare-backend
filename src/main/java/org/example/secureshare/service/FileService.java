@@ -1,5 +1,7 @@
 package org.example.secureshare.service;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.example.secureshare.model.File;
 import org.example.secureshare.model.SharedFile;
 import org.example.secureshare.model.User;
@@ -9,6 +11,8 @@ import org.example.secureshare.repository.FileRepository;
 import org.example.secureshare.repository.SharedFileRepository;
 import org.example.secureshare.repository.UserRepository;
 import org.example.secureshare.util.AuthUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +31,8 @@ import java.util.*;
 @Service
 public class FileService {
 
+    private static final Logger logger = LoggerFactory.getLogger(FileService.class);
+
     @Autowired
     private FileRepository fileRepository;
 
@@ -44,6 +50,72 @@ public class FileService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private SharedFileService sharedFileService;
+
+    @Data
+    @AllArgsConstructor
+    private static class FileLobData {
+        byte[] encryptedData;
+        String encryptedAesKey;
+        String iv;
+        String authTag;
+        String signature;
+        String filename;
+        String description;
+        String category;
+        String contentType;
+        Long originalFileId;
+        Long ownerId;
+        String ownerPublicKey;
+    }
+
+
+    @Transactional(readOnly = true)
+    public FileLobData getFileLobDataForSharing(Long fileId, Long ownerId) {
+        logger.debug("Reading LOB data for file ID: {}", fileId);
+        File originalFile = fileRepository.findById(fileId)
+                .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
+
+        if (!originalFile.getOwnerId().equals(ownerId)) {
+            throw new SecurityException("User is not authorized to share this file.");
+        }
+
+        // Eagerly fetch owner's public key
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + ownerId));
+        String ownerPublicKey = owner.getPublicKey();
+
+        // --- Force eager loading of ALL LOBs ---
+        // This copies the LOB data out of the stream and into a simple byte array
+        byte[] encryptedData = Arrays.copyOf(originalFile.getEncryptedData(), originalFile.getEncryptedData().length);
+
+        // This forces the TEXT LOBs to be read into memory as new Strings
+        String encryptedAesKey = new String(originalFile.getEncryptedAesKey());
+        String iv = new String(originalFile.getIv());
+        String authTag = new String(originalFile.getAuthTag());
+        String signature = new String(originalFile.getSignature());
+
+        logger.debug("Successfully read all LOB data for file ID: {}", fileId);
+
+        // Return the DTO with all data safely in memory
+        return new FileLobData(
+                encryptedData,
+                encryptedAesKey,
+                iv,
+                authTag,
+                signature,
+                originalFile.getFilename(),
+                originalFile.getDescription(),
+                originalFile.getCategory(),
+                originalFile.getContentType(),
+                originalFile.getOriginalFileId(),
+                originalFile.getOwnerId(),
+                ownerPublicKey
+        );
+    }
+
 
     @Transactional
     public List<Long> storeFiles(MultipartFile[] files, String description, String category) throws IOException {
@@ -211,35 +283,36 @@ public class FileService {
     }
 
     @Transactional
-    public Long shareFile(Long fileId, String recipientUsername) {
+    public Long shareFile(Long fileId, String recipientUsername, Boolean isSensitive) { // <-- Note the new 'isSensitive' parameter
         try {
+            User owner = authUtil.getLoggedInUser();
+            logger.debug("Initiating share for file ID: {} from user: {} to user: {}", fileId, owner.getUsername(), recipientUsername);
 
-            String ownerUsername = authUtil.getLoggedInUsername();
-            User owner = userRepository.findByUsername(ownerUsername)
-                    .orElseThrow(() -> new NoSuchElementException("User not found with username: " + ownerUsername));
+            // --- STEP 1: READ (in a separate, read-only transaction) ---
+            FileLobData originalFileData = this.getFileLobDataForSharing(fileId, owner.getUserId());
 
+            // --- STEP 2: PROCESS (in memory) ---
             User recipient = userRepository.findByUsername(recipientUsername)
                     .orElseThrow(() -> new NoSuchElementException("Recipient not found with username: " + recipientUsername));
 
-            File originalFile = fileRepository.findById(fileId)
-                    .orElseThrow(() -> new NoSuchElementException("File not found with ID: " + fileId));
-
-            if (!originalFile.getOwnerId().equals(owner.getUserId())) {
-                throw new SecurityException("User is not authorized to share this file.");
-            }
-
-            if(fileRepository.existbyOriginalFileIdAndOwnerId(fileId, recipient.getUserId())) {
+            // This check now works reliably
+            if (fileRepository.existbyOriginalFileIdAndOwnerId(fileId, recipient.getUserId())) {
+                logger.warn("Share failed: Recipient {} already has access to file ID: {}", recipientUsername, fileId);
                 throw new IllegalArgumentException("Recipient already has access to this file.");
             }
 
-            String metadata = originalFile.getFilename() + originalFile.getDescription() + originalFile.getCategory();
-            boolean isSignatureValid = keyService.verifySignature(metadata.getBytes(), Base64.getDecoder().decode(originalFile.getSignature()), keyService.decodePublicKey(owner.getPublicKey()));
+            String metadata = originalFileData.getFilename() + originalFileData.getDescription() + originalFileData.getCategory();
+            boolean isSignatureValid = keyService.verifySignature(
+                    metadata.getBytes(),
+                    Base64.getDecoder().decode(originalFileData.getSignature()),
+                    keyService.decodePublicKey(originalFileData.getOwnerPublicKey())
+            );
             if (!isSignatureValid) {
                 throw new SecurityException("File integrity check failed: Invalid signature.");
             }
 
             PrivateKey senderPrivateKey = keyService.decryptPrivateKey(owner.getPrivateKey());
-            byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFile.getEncryptedAesKey());
+            byte[] encryptedAesKeyBytes = Base64.getDecoder().decode(originalFileData.getEncryptedAesKey());
             byte[] decryptedAesKeyBytes = keyService.decryptWithRsa(encryptedAesKeyBytes, senderPrivateKey);
             SecretKey decryptedAesKey = keyService.getAesKeyFromBytes(decryptedAesKeyBytes);
 
@@ -247,35 +320,47 @@ public class FileService {
             byte[] encryptedAesKeyForRecipientBytes = keyService.encryptWithRsa(keyService.getAesKeyBytes(decryptedAesKey), recipientPublicKey);
             String encryptedAesKeyForRecipientBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyForRecipientBytes);
 
-            byte[] originalData = originalFile.getEncryptedData();
-            byte[] dataCopy = Arrays.copyOf(originalData, originalData.length);
-
+            // --- STEP 3: WRITE (in a new transaction) ---
+            logger.debug("All checks passed. Saving new file copy for user: {}", recipientUsername);
             File sharedFile = new File();
-            sharedFile.setEncryptedData(dataCopy);
-            sharedFile.setSignature(originalFile.getSignature());
+            sharedFile.setEncryptedData(originalFileData.getEncryptedData()); // Use the eagerly loaded byte array
+            sharedFile.setSignature(originalFileData.getSignature());
             sharedFile.setEncryptedAesKey(encryptedAesKeyForRecipientBase64);
-            sharedFile.setIv(originalFile.getIv());
-            sharedFile.setAuthTag(originalFile.getAuthTag());
-            sharedFile.setFilename(originalFile.getFilename());
-            sharedFile.setDescription(originalFile.getDescription());
-            sharedFile.setCategory(originalFile.getCategory());
-            sharedFile.setContentType(originalFile.getContentType());
+            sharedFile.setIv(originalFileData.getIv());
+            sharedFile.setAuthTag(originalFileData.getAuthTag());
+            sharedFile.setFilename(originalFileData.getFilename());
+            sharedFile.setDescription(originalFileData.getDescription());
+            sharedFile.setCategory(originalFileData.getCategory());
+            sharedFile.setContentType(originalFileData.getContentType());
             sharedFile.setOwnerId(recipient.getUserId());
-            sharedFile.setOriginalFileId(originalFile.getOriginalFileId());
+            sharedFile.setOriginalFileId(originalFileData.getOriginalFileId());
             sharedFile.setTimestamp(java.time.LocalDateTime.now());
 
             File savedFile = fileRepository.save(sharedFile);
+            logger.debug("New file copy saved with ID: {}", savedFile.getId());
+
+            // --- STEP 4: LOG (in the *same* transaction) ---
+            // This is the fix for the "Received Files" page.
+            // This code now runs *with* the file save.
+            sharedFileService.logFileShare(
+                    fileId, // original file ID
+                    savedFile.getId(), // new file ID
+                    recipient.getUserId(),
+                    String.valueOf(isSensitive)
+            );
+            logger.debug("Share log created for new file ID: {}", savedFile.getId());
 
             return savedFile.getId();
 
-        } catch (NoSuchElementException | SecurityException e) {
-            throw new RuntimeException("User is not authorized to share this file.", e);
-        }
-        catch (IllegalArgumentException e) {
-            throw new RuntimeException("Recipient already has access to this file.", e);
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Failed to share file due to a cryptographic error.", e);
+        } catch (NoSuchElementException | SecurityException | IllegalArgumentException e) {
+            // Re-throw these to be caught by the controller as 4xx errors
+            logger.warn("Share failed ({}): {}", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            // All other errors (crypto, LOB, etc.)
+            logger.error("Failed to share file due to a critical error.", e);
+            // Throw a new RuntimeException to ensure the transaction is rolled back
+            throw new RuntimeException("Failed to share file: " + e.getMessage(), e);
         }
     }
 
