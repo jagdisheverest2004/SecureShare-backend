@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,8 +20,8 @@ public class File {
     private Long id;
 
     @Lob
-    @Basic(fetch = FetchType.EAGER)
     @Column(columnDefinition = "BYTEA")
+    @JdbcTypeCode(Types.BINARY)
     private byte[] encryptedData;
 
     @Lob
