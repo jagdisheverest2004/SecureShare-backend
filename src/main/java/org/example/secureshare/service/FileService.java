@@ -93,19 +93,20 @@ public class FileService {
             String encryptedAesKeyBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyBytes);
 
             // Save the file with the separated ciphertext and tag
-            File newFile = new File(
-                    encryptedData,
-                    signature,
-                    encryptedAesKeyBase64,
-                    Base64.getEncoder().encodeToString(iv),
-                    authTagBase64,
-                    file.getOriginalFilename(),
-                    description,
-                    category,
-                    file.getContentType(),
-                    owner.getUserId(),
-                    null
-            );
+            File newFile = new File(); // Use the default constructor
+            newFile.setEncryptedData(encryptedData);
+            newFile.setSignature(signature);
+            newFile.setEncryptedAesKey(encryptedAesKeyBase64);
+            newFile.setIv(Base64.getEncoder().encodeToString(iv));
+            newFile.setAuthTag(authTagBase64);
+            newFile.setFilename(file.getOriginalFilename());
+            newFile.setDescription(description);
+            newFile.setCategory(category);
+            newFile.setContentType(file.getContentType());
+            newFile.setOwnerId(owner.getUserId());
+            newFile.setOriginalFileId(null);
+            newFile.setTimestamp(java.time.LocalDateTime.now());
+
             File savedFile = fileRepository.save(newFile);
 
             savedFile.setOriginalFileId(savedFile.getId());
@@ -239,19 +240,20 @@ public class FileService {
             byte[] encryptedAesKeyForRecipientBytes = keyService.encryptWithRsa(keyService.getAesKeyBytes(decryptedAesKey), recipientPublicKey);
             String encryptedAesKeyForRecipientBase64 = Base64.getEncoder().encodeToString(encryptedAesKeyForRecipientBytes);
 
-            File sharedFile = new File(
-                    originalFile.getEncryptedData(),
-                    originalFile.getSignature(),
-                    encryptedAesKeyForRecipientBase64,
-                    originalFile.getIv(),
-                    originalFile.getAuthTag(),
-                    originalFile.getFilename(),
-                    originalFile.getDescription(),
-                    originalFile.getCategory(),
-                    originalFile.getContentType(),
-                    recipient.getUserId(),
-                    originalFile.getOriginalFileId()
-            );
+            File sharedFile = new File(); // Use the default constructor
+            sharedFile.setEncryptedData(originalFile.getEncryptedData());
+            sharedFile.setSignature(originalFile.getSignature());
+            sharedFile.setEncryptedAesKey(encryptedAesKeyForRecipientBase64);
+            sharedFile.setIv(originalFile.getIv());
+            sharedFile.setAuthTag(originalFile.getAuthTag());
+            sharedFile.setFilename(originalFile.getFilename());
+            sharedFile.setDescription(originalFile.getDescription());
+            sharedFile.setCategory(originalFile.getCategory());
+            sharedFile.setContentType(originalFile.getContentType());
+            sharedFile.setOwnerId(recipient.getUserId());
+            sharedFile.setOriginalFileId(originalFile.getOriginalFileId());
+            sharedFile.setTimestamp(java.time.LocalDateTime.now());
+
             File savedFile = fileRepository.save(sharedFile);
 
             return savedFile.getId();

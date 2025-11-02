@@ -50,32 +50,4 @@ public class File {
     @Column(name = "original_file_id")
     private Long originalFileId;
 
-//    public File(byte[] encryptedData,String signature, String encryptedAesKey, String iv, String authTag,String filename, String description, String category, String contentType, Long ownerId) {
-//        this.encryptedData = encryptedData;
-//        this.encryptedAesKey = encryptedAesKey;
-//        this.signature=signature;
-//        this.iv = iv;
-//        this.authTag=authTag;
-//        this.filename = filename;
-//        this.description = description;
-//        this.category = category;
-//        this.contentType = contentType;
-//        this.ownerId = ownerId;
-//        this.timestamp = LocalDateTime.now();
-//    }
-
-    public File(byte[] encryptedData, String signature, String encryptedAesKey, String iv,String authTag, String filename, String description, String category, String contentType, Long owner, Long originalFile) {
-        this.encryptedData = encryptedData;
-        this.signature=signature;
-        this.encryptedAesKey = encryptedAesKey;
-        this.iv = iv;
-        this.authTag=authTag;
-        this.filename = filename;
-        this.description = description;
-        this.category = category;
-        this.contentType = contentType;
-        this.ownerId = owner;
-        this.originalFileId = originalFile;
-        this.timestamp = LocalDateTime.now();
-    }
 }
